@@ -159,10 +159,10 @@ recovered_key=0c77aad2c105ef0530011c4e07fae978
 verified_key=0c77aad2c105ef0530011c4e07fae978
 ```
 
-The program is intentionally verbose. It prints each major phase, previews the
-first sample, shows progress while reading/writing samples, displays the
-verifier plaintext/ciphertext pair, and explains the key-recovery relationships
-it is using.
+The program is intentionally verbose and formatted for readability. It prints
+bordered sections, aligned fields, progress bars, compact tables, sample
+previews, verifier plaintext/ciphertext pairs, and the key-recovery
+relationships it is using.
 
 ## Command Reference
 
@@ -231,7 +231,7 @@ During collection, the program prints:
 - The final AES round key.
 - The verifier plaintext/ciphertext pair.
 - A preview of the first generated sample.
-- Progress at 25%, 50%, 75%, and 100%.
+- A progress bar at 25%, 50%, 75%, and 100%.
 
 ### `attack-final`
 
@@ -257,10 +257,11 @@ During the attack, the program prints:
 
 - Sample file metadata.
 - The first sample read from disk.
-- Progress while building the timing table.
-- The best low-time ciphertext delta for each `(0, j)` byte pair.
+- A progress bar while building the timing table.
+- A compact table of the best low-time ciphertext delta for each `(0, j)` byte
+  pair.
 - The inferred final-round key offsets from byte 0.
-- Local-search progress and score.
+- A compact local-search table showing score changes.
 - The verified final-round key byte candidate.
 - The recovered original AES key.
 
