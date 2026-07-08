@@ -159,6 +159,11 @@ recovered_key=0c77aad2c105ef0530011c4e07fae978
 verified_key=0c77aad2c105ef0530011c4e07fae978
 ```
 
+The program is intentionally verbose. It prints each major phase, previews the
+first sample, shows progress while reading/writing samples, displays the
+verifier plaintext/ciphertext pair, and explains the key-recovery relationships
+it is using.
+
 ## Command Reference
 
 ### `selftest`
@@ -220,6 +225,14 @@ Example:
 The sample count should be large because timing attacks are statistical. One
 sample teaches almost nothing. Many samples reveal a pattern.
 
+During collection, the program prints:
+
+- The loaded AES key.
+- The final AES round key.
+- The verifier plaintext/ciphertext pair.
+- A preview of the first generated sample.
+- Progress at 25%, 50%, 75%, and 100%.
+
 ### `attack-final`
 
 ```bash
@@ -240,6 +253,17 @@ ciphertext + timing
 It also uses one plaintext/ciphertext verifier stored in the sample file to
 confirm that the recovered key is correct.
 
+During the attack, the program prints:
+
+- Sample file metadata.
+- The first sample read from disk.
+- Progress while building the timing table.
+- The best low-time ciphertext delta for each `(0, j)` byte pair.
+- The inferred final-round key offsets from byte 0.
+- Local-search progress and score.
+- The verified final-round key byte candidate.
+- The recovered original AES key.
+
 ### `verify`
 
 ```bash
@@ -250,6 +274,10 @@ Checks the recovered key against the verifier plaintext/ciphertext pair stored
 inside the sample file.
 
 If verification succeeds, the recovered key is functionally correct for AES.
+
+During verification, the program prints the candidate key, verifier plaintext,
+expected ciphertext, and computed ciphertext so you can see exactly why the key
+is accepted or rejected.
 
 ## A Beginner-Friendly Explanation Of The Attack
 
@@ -671,4 +699,3 @@ Possible future improvements:
 - Add input-file plaintext collection.
 - Add CSV export for plotting timing distributions.
 - Add tests around the attack scorer and sample file parser.
-

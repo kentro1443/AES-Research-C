@@ -184,6 +184,24 @@ static void print_hex(const char *label, const u8 x[16]) {
   printf("\n");
 }
 
+static void print_step(const char *title) {
+  printf("\n== %s ==\n", title);
+}
+
+static void print_sample_preview(const sample_t *s) {
+  print_hex("first_plaintext=", s->p);
+  print_hex("first_ciphertext=", s->c);
+  printf("first_timing=%llu\n", s->t);
+}
+
+static void print_offsets(const u8 off[16]) {
+  printf("round10_key_offsets_from_byte0=");
+  for (int i = 0; i < 16; i++) {
+    printf("%s%02x", i ? " " : "", off[i]);
+  }
+  printf("\n");
+}
+
 static u64 synthetic_time(const u8 c[16], const u8 last[16]) {
   int collisions = 0;
   for (int i = 0; i < 16; i++) {
@@ -199,9 +217,13 @@ static u64 synthetic_time(const u8 c[16], const u8 last[16]) {
 static int cmd_keygen(int argc, char **argv) {
   const char *out = argc > 2 ? argv[2] : "key.bin";
   u8 key[16];
+  print_step("Key generation");
+  printf("Generating one random AES-128 key from /dev/urandom.\n");
+  printf("AES-128 keys are 16 bytes long.\n");
   random_bytes(key, 16);
   if (write_file_exact(out, key, 16)) { perror(out); return 1; }
   print_hex("key=", key);
+  printf("wrote_key_file=%s\n", out);
   return 0;
 }
 
@@ -211,9 +233,17 @@ static int cmd_collect(int argc, char **argv) {
   u32 count = argc > 4 ? (u32)strtoul(argv[4], 0, 0) : (1u << 18);
   if (count == 0 || count > MAX_SAMPLES) count = (1u << 18);
 
+  print_step("Sample collection");
+  printf("Reading AES key from %s.\n", keyfile);
+  printf("Preparing to create %u plaintext/ciphertext/timing samples.\n", count);
+  printf("Timing mode: synthetic final-round cache-collision leakage.\n");
+
   u8 key[16], w[176];
   if (read_file_exact(keyfile, key, 16)) { perror(keyfile); return 1; }
+  print_hex("loaded_key=", key);
+  printf("Expanding the raw key into 176 bytes of AES-128 round keys.\n");
   key_expand(key, w);
+  print_hex("round10_key=", w + 160);
 
   FILE *f = fopen(out, "wb");
   if (!f) { perror(out); return 1; }
@@ -225,6 +255,9 @@ static int cmd_collect(int argc, char **argv) {
   random_bytes(h.verifier_p, 16);
   encrypt_block(h.verifier_p, h.verifier_c, w);
   fwrite(&h, sizeof h, 1, f);
+  printf("Writing sample file header to %s.\n", out);
+  print_hex("verifier_plaintext=", h.verifier_p);
+  print_hex("verifier_ciphertext=", h.verifier_c);
 
   srand((unsigned)time(NULL));
   sample_t s;
@@ -233,8 +266,17 @@ static int cmd_collect(int argc, char **argv) {
     encrypt_block(s.p, s.c, w);
     s.t = synthetic_time(s.c, w + 160);
     fwrite(&s, sizeof s, 1, f);
+    if (i == 0) {
+      printf("First generated sample preview:\n");
+      print_sample_preview(&s);
+    }
+    if (count >= 8 && (i + 1) % (count / 4) == 0) {
+      printf("collection_progress=%u/%u\n", i + 1, count);
+      fflush(stdout);
+    }
   }
   fclose(f);
+  printf("Finished writing %u samples.\n", count);
   print_hex("key=", key);
   printf("samples=%u\nout=%s\n", count, out);
   return 0;
@@ -260,6 +302,8 @@ static double candidate_cost(const u8 off[16], double mean[PAIRS][256]) {
 static int cmd_attack(int argc, char **argv) {
   const char *samples_path = argc > 2 ? argv[2] : "samples.bin";
   const char *out = argc > 3 ? argv[3] : "recovered_key.bin";
+  print_step("Final-round timing attack");
+  printf("Reading timing samples from %s.\n", samples_path);
   FILE *f = fopen(samples_path, "rb");
   if (!f) { perror(samples_path); return 1; }
   sample_header_t h;
@@ -268,12 +312,22 @@ static int cmd_attack(int argc, char **argv) {
     fclose(f);
     return 1;
   }
+  printf("sample_count=%u\n", h.count);
+  printf("sample_mode=%u\n", h.mode);
+  print_hex("verifier_plaintext=", h.verifier_p);
+  print_hex("verifier_ciphertext=", h.verifier_c);
+  printf("Building average timing table for all 120 ciphertext-byte pairs.\n");
+  printf("For each pair (i,j), timings are grouped by ciphertext_delta=c[i]^c[j].\n");
 
   double sum[PAIRS][256] = {{0}};
   u32 num[PAIRS][256] = {{0}};
   sample_t s;
   for (u32 n = 0; n < h.count; n++) {
     if (fread(&s, sizeof s, 1, f) != 1) { fprintf(stderr, "truncated samples\n"); return 1; }
+    if (n == 0) {
+      printf("First sample read from file:\n");
+      print_sample_preview(&s);
+    }
     int p = 0;
     for (int i = 0; i < 16; i++)
       for (int j = i + 1; j < 16; j++, p++) {
@@ -281,26 +335,38 @@ static int cmd_attack(int argc, char **argv) {
         sum[p][d] += (double)s.t;
         num[p][d]++;
       }
+    if (h.count >= 8 && (n + 1) % (h.count / 4) == 0) {
+      printf("analysis_read_progress=%u/%u\n", n + 1, h.count);
+      fflush(stdout);
+    }
   }
   fclose(f);
 
+  printf("Converting timing sums into averages.\n");
   double mean[PAIRS][256];
   for (int p = 0; p < PAIRS; p++)
     for (int d = 0; d < 256; d++)
       mean[p][d] = num[p][d] ? sum[p][d] / num[p][d] : 1e30;
 
+  printf("Finding the lowest-average delta for pairs involving byte 0.\n");
   u8 off[16] = {0};
   for (int j = 1; j < 16; j++) {
     int p = pair_index(0, j);
     int best = 0;
     for (int d = 1; d < 256; d++) if (mean[p][d] < mean[p][best]) best = d;
     off[j] = (u8)best;
+    printf("best_delta_pair_0_%d=%02x average_time=%.3f observations=%u\n",
+           j, best, mean[p][best], num[p][best]);
   }
+  print_offsets(off);
 
+  printf("Refining key-byte offsets with local search across all 120 pairs.\n");
   double best_cost = candidate_cost(off, mean);
   int changed = 1;
+  int iterations = 0;
   for (int iter = 0; iter < 200 && changed; iter++) {
     changed = 0;
+    iterations = iter + 1;
     for (int b = 1; b < 16; b++) {
       u8 bestv = off[b];
       double local = best_cost;
@@ -317,8 +383,14 @@ static int cmd_attack(int argc, char **argv) {
         changed = 1;
       }
     }
+    printf("local_search_iteration=%d score=%.3f changed=%s\n",
+           iter + 1, best_cost, changed ? "yes" : "no");
   }
+  printf("local_search_iterations=%d\n", iterations);
+  print_offsets(off);
 
+  printf("Trying 256 possibilities for final_round_key[0].\n");
+  printf("Each candidate final-round key is reversed to a raw AES key and checked.\n");
   for (int k0 = 0; k0 < 256; k0++) {
     u8 last[16], raw[16], w[176], check[16];
     for (int i = 0; i < 16; i++) last[i] = (u8)(k0 ^ off[i]);
@@ -327,6 +399,7 @@ static int cmd_attack(int argc, char **argv) {
     encrypt_block(h.verifier_p, check, w);
     if (!memcmp(check, h.verifier_c, 16)) {
       if (write_file_exact(out, raw, 16)) { perror(out); return 1; }
+      printf("verified_candidate_k0=%02x\n", k0);
       print_hex("recovered_key=", raw);
       print_hex("round10_key=", last);
       printf("samples=%u\nscore=%.3f\nout=%s\n", h.count, best_cost, out);
@@ -342,14 +415,21 @@ static int cmd_verify(int argc, char **argv) {
   const char *keyfile = argc > 2 ? argv[2] : "recovered_key.bin";
   const char *samples_path = argc > 3 ? argv[3] : "samples.bin";
   u8 key[16], w[176], check[16];
+  print_step("Recovered key verification");
+  printf("Reading candidate key from %s.\n", keyfile);
   if (read_file_exact(keyfile, key, 16)) { perror(keyfile); return 1; }
+  print_hex("candidate_key=", key);
+  printf("Reading verifier plaintext/ciphertext from %s.\n", samples_path);
   FILE *f = fopen(samples_path, "rb");
   if (!f) { perror(samples_path); return 1; }
   sample_header_t h;
   if (fread(&h, sizeof h, 1, f) != 1 || h.magic != MAGIC) { fprintf(stderr, "bad sample file\n"); return 1; }
   fclose(f);
+  print_hex("verifier_plaintext=", h.verifier_p);
+  print_hex("expected_ciphertext=", h.verifier_c);
   key_expand(key, w);
   encrypt_block(h.verifier_p, check, w);
+  print_hex("computed_ciphertext=", check);
   if (memcmp(check, h.verifier_c, 16)) {
     fprintf(stderr, "verification failed\n");
     return 2;
@@ -359,17 +439,26 @@ static int cmd_verify(int argc, char **argv) {
 }
 
 static int cmd_selftest(void) {
+  print_step("Self-test");
+  printf("Checking AES-128 encryption against a known NIST test vector.\n");
   const u8 key[16] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
   const u8 pt[16] = {0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff};
   const u8 want[16] = {0x69,0xc4,0xe0,0xd8,0x6a,0x7b,0x04,0x30,0xd8,0xcd,0xb7,0x80,0x70,0xb4,0xc5,0x5a};
   u8 w[176], got[16], raw[16];
+  print_hex("test_key=", key);
+  print_hex("test_plaintext=", pt);
+  print_hex("expected_ciphertext=", want);
   key_expand(key, w);
   encrypt_block(pt, got, w);
+  print_hex("computed_ciphertext=", got);
   if (memcmp(got, want, 16)) {
     print_hex("got=", got);
     return 1;
   }
+  printf("AES encryption test passed.\n");
+  printf("Checking that round 10 key can be reversed back to the original key.\n");
   invert_last_round_key(w + 160, raw);
+  print_hex("recovered_from_round10=", raw);
   if (memcmp(raw, key, 16)) return 2;
   puts("selftest=ok");
   return 0;
