@@ -27,7 +27,14 @@ key. CPU memory/cache behavior can make some lookups slightly faster than
 others. If an attacker collects enough encryptions and timings, statistics can
 reveal patterns about the secret key.
 
-This lab models that situation with synthetic timing:
+This lab supports two timing modes:
+
+- Synthetic timing, which intentionally models the cache-collision signal so the
+  attack pipeline is easy to learn and reproduce.
+- Real timing, which measures elapsed encryption time on your machine and is
+  experimental.
+
+The default synthetic mode models the situation like this:
 
 ```text
 plaintext + key -> AES encryption -> ciphertext
@@ -164,6 +171,22 @@ bordered sections, aligned fields, progress bars, compact tables, sample
 previews, verifier plaintext/ciphertext pairs, and the key-recovery
 relationships it is using.
 
+To collect real measured timings instead of synthetic timing:
+
+```bash
+./aes_lab collect key.bin real_samples.bin 262144 -real
+```
+
+or:
+
+```bash
+./aes_lab collect-real key.bin real_samples.bin 262144
+```
+
+Real mode writes real elapsed timer ticks into the sample file, but key recovery
+is not guaranteed. On a modern MacBook, the real timing signal may be too weak or
+too noisy without further tuning.
+
 ## Command Reference
 
 ### `selftest`
@@ -204,7 +227,8 @@ AES-128 keys are 16 bytes, or 128 bits.
 ### `collect`
 
 ```bash
-./aes_lab collect [key.bin] [samples.bin] [count]
+./aes_lab collect [key.bin] [samples.bin] [count] [-real]
+./aes_lab collect-real [key.bin] [samples.bin] [count]
 ```
 
 Generates timing samples.
@@ -213,7 +237,7 @@ For each sample, the program:
 
 1. Generates a random 16-byte plaintext.
 2. Encrypts it with the AES key.
-3. Computes a synthetic timing value based on final-round collisions.
+3. Records either a synthetic timing value or a real measured timing value.
 4. Stores plaintext, ciphertext, and timing in the sample file.
 
 Example:
@@ -224,6 +248,22 @@ Example:
 
 The sample count should be large because timing attacks are statistical. One
 sample teaches almost nothing. Many samples reveal a pattern.
+
+Default mode is synthetic:
+
+```bash
+./aes_lab collect mykey.bin mysamples.bin 262144
+```
+
+Real timing mode:
+
+```bash
+./aes_lab collect mykey.bin real_samples.bin 262144 -real
+```
+
+In real mode, the program disturbs cache with an 8 MiB buffer before timing one
+AES encryption. The recorded timing is raw timer ticks from the local machine,
+not fake model output.
 
 During collection, the program prints:
 
@@ -471,7 +511,7 @@ The sample file starts with metadata:
 
 - `magic`: identifies the file format.
 - `count`: number of samples.
-- `mode`: currently `1` for synthetic timing mode.
+- `mode`: `1` for synthetic timing mode, `2` for real measured timing mode.
 - `verifier_p`: a known plaintext.
 - `verifier_c`: its ciphertext.
 
@@ -571,6 +611,30 @@ It:
 
 This is the educational stand-in for real CPU cache timing.
 
+### Real Timing Leakage
+
+```c
+static u64 real_time_encrypt(const u8 p[16], u8 c[16], const u8 w[176])
+```
+
+This function measures actual elapsed encryption time.
+
+It:
+
+1. Disturbs cache by reading through an 8 MiB buffer.
+2. Starts a timer.
+3. Encrypts one AES block.
+4. Touches ciphertext bytes so the compiler cannot ignore the result.
+5. Stops the timer.
+6. Returns raw elapsed timer ticks.
+
+On macOS, the timer is `mach_absolute_time()`. On other platforms, the fallback
+uses `clock_gettime()`.
+
+Real timing mode is experimental. It creates genuine timing samples, but the
+current AES code and modern Apple Silicon may not leak a clean enough signal for
+full key recovery without more tuning.
+
 ### Collection Command
 
 ```c
@@ -620,10 +684,13 @@ If yes, the recovered key is correct.
 
 ## Important Limitations
 
-This project currently uses synthetic timing. That means the timing signal is
-modeled by the program instead of measured from real M4 cache behavior.
+This project has both synthetic timing and real timing.
 
-This was chosen because:
+Synthetic timing is the reliable teaching path. The timing signal is modeled by
+the program instead of measured from real M4 cache behavior.
+
+Real timing is the experimental path. It measures actual elapsed encryption
+time, but recovery may fail because:
 
 - Modern Apple Silicon uses hardware features and cache behavior unlike the old
   Pentium-era systems in the papers.
@@ -631,9 +698,9 @@ This was chosen because:
 - Real cache timing requires careful calibration, CPU pinning, eviction logic,
   and a deliberately vulnerable table implementation.
 
-The current code proves the attack methodology end to end. It does not prove
-that your MacBook Air M4 leaks enough real timing information for this exact
-attack.
+The synthetic mode proves the attack methodology end to end. The real mode
+answers a different question: whether this local implementation and machine leak
+enough timing signal to recover the key in practice.
 
 ## Common Questions
 
@@ -678,6 +745,18 @@ make test
 ./aes_lab verify recovered_key.bin samples.bin
 ```
 
+Real timing experiment:
+
+```bash
+./aes_lab collect key.bin real_samples.bin 262144 -real
+./aes_lab attack-final real_samples.bin real_recovered_key.bin
+./aes_lab verify real_recovered_key.bin real_samples.bin
+```
+
+If the attack fails in real mode, that does not mean AES is broken or the code is
+broken. It usually means the measured signal is too noisy or too weak for this
+simple collection strategy.
+
 To try a larger sample count:
 
 ```bash
@@ -693,8 +772,8 @@ time and disk space.
 
 Possible future improvements:
 
-- Add a real timing backend using `mach_absolute_time()`.
-- Add cache eviction buffers and calibration.
+- Add real-timing calibration and signal-quality reports.
+- Add stronger vulnerable T-table AES behavior for real timing experiments.
 - Add a true T-table AES implementation closer to historical OpenSSL.
 - Add a Bernstein-style profile/correlation workflow.
 - Add input-file plaintext collection.

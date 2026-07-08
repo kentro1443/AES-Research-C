@@ -6,12 +6,19 @@
 #include <string.h>
 #include <time.h>
 #include <unistd.h>
+#ifdef __APPLE__
+#include <mach/mach_time.h>
+#endif
 
 #define AES_BLOCK 16
 #define AES_EXPANDED 176
 #define MAX_SAMPLES (1u << 22)
 #define PAIRS 120
 #define MAGIC 0x41455354494d4531ULL
+#define MODE_SYNTHETIC 1
+#define MODE_REAL 2
+#define EVICT_SIZE (8u * 1024u * 1024u)
+#define EVICT_STRIDE 64u
 
 typedef unsigned char u8;
 typedef unsigned int u32;
@@ -37,6 +44,7 @@ static const char *clr_title = "";
 static const char *clr_label = "";
 static const char *clr_ok = "";
 static const char *clr_warn = "";
+static volatile u8 timing_sink = 0;
 
 static const u8 sbox[256] = {
   0x63,0x7c,0x77,0x7b,0xf2,0x6b,0x6f,0xc5,0x30,0x01,0x67,0x2b,0xfe,0xd7,0xab,0x76,
@@ -143,6 +151,45 @@ static void encrypt_block(const u8 in[16], u8 out[16], const u8 w[176]) {
   shift_rows(s);
   add_round_key(s, w + 160);
   memcpy(out, s, 16);
+}
+
+static u64 now_ticks(void) {
+#ifdef __APPLE__
+  return (u64)mach_absolute_time();
+#elif defined(CLOCK_MONOTONIC_RAW)
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+  return (u64)ts.tv_sec * 1000000000ULL + (u64)ts.tv_nsec;
+#else
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC, &ts);
+  return (u64)ts.tv_sec * 1000000000ULL + (u64)ts.tv_nsec;
+#endif
+}
+
+static void disturb_cache(void) {
+  static u8 *buf = NULL;
+  if (!buf) {
+    buf = (u8 *)malloc(EVICT_SIZE);
+    if (!buf) { perror("malloc"); exit(1); }
+    for (size_t i = 0; i < EVICT_SIZE; i++) buf[i] = (u8)i;
+  }
+  u8 acc = timing_sink;
+  for (size_t i = 0; i < EVICT_SIZE; i += EVICT_STRIDE) {
+    acc ^= buf[i];
+  }
+  timing_sink = acc;
+}
+
+static u64 real_time_encrypt(const u8 p[16], u8 c[16], const u8 w[176]) {
+  disturb_cache();
+  u64 start = now_ticks();
+  encrypt_block(p, c, w);
+  u8 acc = timing_sink;
+  for (int i = 0; i < 16; i++) acc ^= c[i];
+  timing_sink = acc;
+  u64 end = now_ticks();
+  return end - start;
 }
 
 static void invert_last_round_key(const u8 last[16], u8 raw[16]) {
@@ -273,6 +320,12 @@ static void print_offsets(const u8 off[16]) {
   printf("\n");
 }
 
+static const char *mode_name(u32 mode) {
+  if (mode == MODE_SYNTHETIC) return "synthetic final-round cache-collision leakage";
+  if (mode == MODE_REAL) return "real measured encryption time";
+  return "unknown";
+}
+
 static u64 synthetic_time(const u8 c[16], const u8 last[16]) {
   int collisions = 0;
   for (int i = 0; i < 16; i++) {
@@ -302,13 +355,23 @@ static int cmd_collect(int argc, char **argv) {
   const char *keyfile = argc > 2 ? argv[2] : "key.bin";
   const char *out = argc > 3 ? argv[3] : "samples.bin";
   u32 count = argc > 4 ? (u32)strtoul(argv[4], 0, 0) : (1u << 18);
+  u32 mode = !strcmp(argv[1], "collect-real") ? MODE_REAL : MODE_SYNTHETIC;
+  for (int i = 5; i < argc; i++) {
+    if (!strcmp(argv[i], "-real") || !strcmp(argv[i], "--real")) mode = MODE_REAL;
+    else if (!strcmp(argv[i], "-synthetic") || !strcmp(argv[i], "--synthetic")) mode = MODE_SYNTHETIC;
+  }
   if (count == 0 || count > MAX_SAMPLES) count = (1u << 18);
 
   print_step("Sample collection");
   print_field_str("key file", keyfile);
   print_field_str("output file", out);
   print_field_u32("requested samples", count);
-  print_field_str("timing mode", "synthetic final-round cache-collision leakage");
+  print_field_str("timing mode", mode_name(mode));
+  if (mode == MODE_REAL) {
+    printf("  %sNOTE%s real mode measures elapsed encryption time on this machine.\n", clr_warn, clr_reset);
+    print_note("Recovery may fail or need many more samples if the timing signal is weak.");
+    print_field_u32("cache disturb bytes", EVICT_SIZE);
+  }
 
   u8 key[16], w[176];
   if (read_file_exact(keyfile, key, 16)) { perror(keyfile); return 1; }
@@ -323,7 +386,7 @@ static int cmd_collect(int argc, char **argv) {
   memset(&h, 0, sizeof h);
   h.magic = MAGIC;
   h.count = count;
-  h.mode = 1;
+  h.mode = mode;
   random_bytes(h.verifier_p, 16);
   encrypt_block(h.verifier_p, h.verifier_c, w);
   fwrite(&h, sizeof h, 1, f);
@@ -336,8 +399,12 @@ static int cmd_collect(int argc, char **argv) {
   sample_t s;
   for (u32 i = 0; i < count; i++) {
     random_bytes(s.p, 16);
-    encrypt_block(s.p, s.c, w);
-    s.t = synthetic_time(s.c, w + 160);
+    if (mode == MODE_REAL) {
+      s.t = real_time_encrypt(s.p, s.c, w);
+    } else {
+      encrypt_block(s.p, s.c, w);
+      s.t = synthetic_time(s.c, w + 160);
+    }
     fwrite(&s, sizeof s, 1, f);
     if (i == 0) {
       print_note("First generated sample preview:");
@@ -389,6 +456,11 @@ static int cmd_attack(int argc, char **argv) {
   }
   print_field_u32("sample count", h.count);
   print_field_u32("sample mode", h.mode);
+  print_field_str("timing mode", mode_name(h.mode));
+  if (h.mode == MODE_REAL) {
+    printf("  %sNOTE%s real timing mode is experimental; recovery is not guaranteed.\n",
+           clr_warn, clr_reset);
+  }
   print_hex("verifier_plaintext=", h.verifier_p);
   print_hex("verifier_ciphertext=", h.verifier_c);
   print_note("Building an average timing table for all 120 ciphertext-byte pairs.");
@@ -555,10 +627,11 @@ static void usage(const char *argv0) {
     "usage:\n"
     "  %s selftest\n"
     "  %s keygen [key.bin]\n"
-    "  %s collect [key.bin] [samples.bin] [count]\n"
+    "  %s collect [key.bin] [samples.bin] [count] [-real]\n"
+    "  %s collect-real [key.bin] [samples.bin] [count]\n"
     "  %s attack-final [samples.bin] [recovered_key.bin]\n"
     "  %s verify [recovered_key.bin] [samples.bin]\n",
-    argv0, argv0, argv0, argv0, argv0);
+    argv0, argv0, argv0, argv0, argv0, argv0);
 }
 
 int main(int argc, char **argv) {
@@ -567,6 +640,7 @@ int main(int argc, char **argv) {
   if (!strcmp(argv[1], "selftest")) return cmd_selftest();
   if (!strcmp(argv[1], "keygen")) return cmd_keygen(argc, argv);
   if (!strcmp(argv[1], "collect")) return cmd_collect(argc, argv);
+  if (!strcmp(argv[1], "collect-real")) return cmd_collect(argc, argv);
   if (!strcmp(argv[1], "attack-final")) return cmd_attack(argc, argv);
   if (!strcmp(argv[1], "verify")) return cmd_verify(argc, argv);
   usage(argv[0]);
