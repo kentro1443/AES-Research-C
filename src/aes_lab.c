@@ -18,9 +18,10 @@
 #define MODE_SYNTHETIC 1
 #define MODE_REAL 2
 #define MODE_REAL_DEMO_LEAK 3
-#define EVICT_SIZE (8u * 1024u * 1024u)
+#define DEFAULT_EVICT_SIZE (256u * 1024u)
 #define EVICT_STRIDE 64u
 #define DEMO_LEAK_WORK 800u
+#define FINAL_STRIDE 4096u
 
 typedef unsigned char u8;
 typedef unsigned int u32;
@@ -47,6 +48,20 @@ static const char *clr_label = "";
 static const char *clr_ok = "";
 static const char *clr_warn = "";
 static volatile u8 timing_sink = 0;
+static int tables_ready = 0;
+static size_t evict_size = DEFAULT_EVICT_SIZE;
+
+#if defined(__GNUC__) || defined(__clang__)
+#define ALIGNED4096 __attribute__((aligned(4096)))
+#else
+#define ALIGNED4096
+#endif
+
+static u8 te0[256][4] ALIGNED4096;
+static u8 te1[256][4] ALIGNED4096;
+static u8 te2[256][4] ALIGNED4096;
+static u8 te3[256][4] ALIGNED4096;
+static u8 final_table[256][FINAL_STRIDE] ALIGNED4096;
 
 static const u8 sbox[256] = {
   0x63,0x7c,0x77,0x7b,0xf2,0x6b,0x6f,0xc5,0x30,0x01,0x67,0x2b,0xfe,0xd7,0xab,0x76,
@@ -89,6 +104,7 @@ static const u8 invsbox[256] = {
 static const u8 rcon[10] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36};
 
 static u8 xtime(u8 x) { return (u8)((x << 1) ^ ((x >> 7) * 0x1b)); }
+static u8 mul3(u8 x) { return (u8)(xtime(x) ^ x); }
 
 static void add_round_key(u8 s[16], const u8 *rk) {
   for (int i = 0; i < 16; i++) s[i] ^= rk[i];
@@ -155,6 +171,61 @@ static void encrypt_block(const u8 in[16], u8 out[16], const u8 w[176]) {
   memcpy(out, s, 16);
 }
 
+static void init_tables(void) {
+  if (tables_ready) return;
+  for (int i = 0; i < 256; i++) {
+    u8 x = sbox[i];
+    te0[i][0] = xtime(x); te0[i][1] = x;        te0[i][2] = x;        te0[i][3] = mul3(x);
+    te1[i][0] = mul3(x);  te1[i][1] = xtime(x); te1[i][2] = x;        te1[i][3] = x;
+    te2[i][0] = x;        te2[i][1] = mul3(x);  te2[i][2] = xtime(x); te2[i][3] = x;
+    te3[i][0] = x;        te3[i][1] = x;        te3[i][2] = mul3(x);  te3[i][3] = xtime(x);
+    final_table[i][0] = x;
+  }
+  tables_ready = 1;
+}
+
+static void ttable_column(u8 out[4], u8 a, u8 b, u8 c, u8 d, const u8 rk[4]) {
+  const volatile u8 *x0 = te0[a];
+  const volatile u8 *x1 = te1[b];
+  const volatile u8 *x2 = te2[c];
+  const volatile u8 *x3 = te3[d];
+  for (int i = 0; i < 4; i++) {
+    out[i] = (u8)(x0[i] ^ x1[i] ^ x2[i] ^ x3[i] ^ rk[i]);
+  }
+}
+
+static void ttable_encrypt_block(const u8 in[16], u8 out[16], const u8 w[176]) {
+  init_tables();
+  u8 s[16], t[16];
+  memcpy(s, in, 16);
+  add_round_key(s, w);
+  for (int r = 1; r <= 9; r++) {
+    const u8 *rk = w + 16 * r;
+    ttable_column(t + 0,  s[0],  s[5],  s[10], s[15], rk + 0);
+    ttable_column(t + 4,  s[4],  s[9],  s[14], s[3],  rk + 4);
+    ttable_column(t + 8,  s[8],  s[13], s[2],  s[7],  rk + 8);
+    ttable_column(t + 12, s[12], s[1],  s[6],  s[11], rk + 12);
+    memcpy(s, t, 16);
+  }
+  const u8 *rk = w + 160;
+  out[0]  = (u8)(final_table[s[0]][0]  ^ rk[0]);
+  out[1]  = (u8)(final_table[s[5]][0]  ^ rk[1]);
+  out[2]  = (u8)(final_table[s[10]][0] ^ rk[2]);
+  out[3]  = (u8)(final_table[s[15]][0] ^ rk[3]);
+  out[4]  = (u8)(final_table[s[4]][0]  ^ rk[4]);
+  out[5]  = (u8)(final_table[s[9]][0]  ^ rk[5]);
+  out[6]  = (u8)(final_table[s[14]][0] ^ rk[6]);
+  out[7]  = (u8)(final_table[s[3]][0]  ^ rk[7]);
+  out[8]  = (u8)(final_table[s[8]][0]  ^ rk[8]);
+  out[9]  = (u8)(final_table[s[13]][0] ^ rk[9]);
+  out[10] = (u8)(final_table[s[2]][0]  ^ rk[10]);
+  out[11] = (u8)(final_table[s[7]][0]  ^ rk[11]);
+  out[12] = (u8)(final_table[s[12]][0] ^ rk[12]);
+  out[13] = (u8)(final_table[s[1]][0]  ^ rk[13]);
+  out[14] = (u8)(final_table[s[6]][0]  ^ rk[14]);
+  out[15] = (u8)(final_table[s[11]][0] ^ rk[15]);
+}
+
 static u64 now_ticks(void) {
 #ifdef __APPLE__
   return (u64)mach_absolute_time();
@@ -171,13 +242,16 @@ static u64 now_ticks(void) {
 
 static void disturb_cache(void) {
   static u8 *buf = NULL;
-  if (!buf) {
-    buf = (u8 *)malloc(EVICT_SIZE);
+  static size_t buf_size = 0;
+  if (!buf || buf_size < evict_size) {
+    free(buf);
+    buf = (u8 *)malloc(evict_size);
     if (!buf) { perror("malloc"); exit(1); }
-    for (size_t i = 0; i < EVICT_SIZE; i++) buf[i] = (u8)i;
+    buf_size = evict_size;
+    for (size_t i = 0; i < buf_size; i++) buf[i] = (u8)i;
   }
   u8 acc = timing_sink;
-  for (size_t i = 0; i < EVICT_SIZE; i += EVICT_STRIDE) {
+  for (size_t i = 0; i < evict_size; i += EVICT_STRIDE) {
     acc ^= buf[i];
   }
   timing_sink = acc;
@@ -347,17 +421,19 @@ static u64 synthetic_time(const u8 c[16], const u8 last[16]) {
 
 static u64 real_time_encrypt(const u8 p[16], u8 c[16], const u8 w[176],
                              u32 repeats, int demo_leak) {
-  disturb_cache();
-  u64 start = now_ticks();
+  u64 total = 0;
   for (u32 r = 0; r < repeats; r++) {
-    encrypt_block(p, c, w);
+    disturb_cache();
+    u64 start = now_ticks();
+    ttable_encrypt_block(p, c, w);
     if (demo_leak) demo_leak_delay(c, w + 160);
     u8 acc = timing_sink;
     for (int i = 0; i < 16; i++) acc ^= c[i];
     timing_sink = acc;
+    u64 end = now_ticks();
+    total += end - start;
   }
-  u64 end = now_ticks();
-  return end - start;
+  return total;
 }
 
 static int cmd_keygen(int argc, char **argv) {
@@ -386,6 +462,9 @@ static int cmd_collect(int argc, char **argv) {
     else if ((!strcmp(argv[i], "-repeat") || !strcmp(argv[i], "--repeat")) && i + 1 < argc) {
       repeats = (u32)strtoul(argv[++i], 0, 0);
       if (repeats == 0) repeats = 1;
+    } else if ((!strcmp(argv[i], "-evict-kb") || !strcmp(argv[i], "--evict-kb")) && i + 1 < argc) {
+      u32 kb = (u32)strtoul(argv[++i], 0, 0);
+      if (kb > 0) evict_size = (size_t)kb * 1024u;
     }
   }
   if (count == 0 || count > MAX_SAMPLES) count = (1u << 18);
@@ -396,13 +475,14 @@ static int cmd_collect(int argc, char **argv) {
   print_field_u32("requested samples", count);
   print_field_str("timing mode", mode_name(mode));
   if (mode == MODE_REAL || mode == MODE_REAL_DEMO_LEAK) {
+    print_field_str("target AES", "aligned T-table AES with separate final table");
     printf("  %sNOTE%s real mode measures elapsed encryption time on this machine.\n", clr_warn, clr_reset);
     if (mode == MODE_REAL) {
       print_note("Recovery may fail or need many more samples if the timing signal is weak.");
     } else {
       print_note("Demo leak mode intentionally adds real timed CPU work tied to final-round collisions.");
     }
-    print_field_u32("cache disturb bytes", EVICT_SIZE);
+    print_field_u64("cache disturb bytes", (u64)evict_size);
     print_field_u32("repeats per sample", repeats);
     if (mode == MODE_REAL_DEMO_LEAK) print_field_u32("demo leak work unit", DEMO_LEAK_WORK);
   }
@@ -474,6 +554,61 @@ static double candidate_cost(const u8 off[16], double mean[PAIRS][256]) {
   return c;
 }
 
+static double optimize_offsets(u8 off[16], double mean[PAIRS][256], int *iterations) {
+  double best_cost = candidate_cost(off, mean);
+  int changed = 1;
+  *iterations = 0;
+  for (int iter = 0; iter < 200 && changed; iter++) {
+    changed = 0;
+    *iterations = iter + 1;
+    for (int b = 1; b < 16; b++) {
+      u8 bestv = off[b];
+      double local = best_cost;
+      for (int v = 0; v < 256; v++) {
+        u8 old = off[b];
+        off[b] = (u8)v;
+        double c = candidate_cost(off, mean);
+        off[b] = old;
+        if (c < local) { local = c; bestv = (u8)v; }
+      }
+      if (bestv != off[b]) {
+        off[b] = bestv;
+        best_cost = local;
+        changed = 1;
+      }
+    }
+  }
+  return best_cost;
+}
+
+static int write_verified_candidate(const u8 off[16], const sample_header_t *h,
+                                    const char *out, double score,
+                                    int start_index, int iterations) {
+  for (int k0 = 0; k0 < 256; k0++) {
+    u8 last[16], raw[16], w[176], check[16];
+    for (int i = 0; i < 16; i++) last[i] = (u8)(k0 ^ off[i]);
+    invert_last_round_key(last, raw);
+    key_expand(raw, w);
+    encrypt_block(h->verifier_p, check, w);
+    if (!memcmp(check, h->verifier_c, 16)) {
+      if (write_file_exact(out, raw, 16)) { perror(out); return 2; }
+      print_field_u32("successful start", (u32)start_index);
+      print_field_u32("start iterations", (u32)iterations);
+      print_field_prefix("verified candidate k0");
+      printf("%02x\n", k0);
+      print_hex("recovered_key=", raw);
+      print_hex("round10_key=", last);
+      print_field_u32("samples", h->count);
+      print_field_double("score", score);
+      print_field_str("out", out);
+      printf("  %sSUCCESS%s recovered key verified against the stored plaintext/ciphertext pair.\n",
+             clr_ok, clr_reset);
+      return 1;
+    }
+  }
+  return 0;
+}
+
 static int cmd_attack(int argc, char **argv) {
   const char *samples_path = argc > 2 ? argv[2] : "samples.bin";
   const char *out = argc > 3 ? argv[3] : "recovered_key.bin";
@@ -503,15 +638,34 @@ static int cmd_attack(int argc, char **argv) {
   print_note("Building an average timing table for all 120 ciphertext-byte pairs.");
   print_note("For each pair (i,j), timings are grouped by delta = c[i] ^ c[j].");
 
+  long data_start = ftell(f);
+  u64 min_time = ~0ULL;
+  sample_t s;
+  for (u32 n = 0; n < h.count; n++) {
+    if (fread(&s, sizeof s, 1, f) != 1) { fprintf(stderr, "truncated samples\n"); return 1; }
+    if (s.t < min_time) min_time = s.t;
+  }
+  u64 cutoff = min_time * 2;
+  if (cutoff < min_time) cutoff = ~0ULL;
+  print_field_u64("minimum timing", min_time);
+  print_field_u64("outlier cutoff", cutoff);
+  if (fseek(f, data_start, SEEK_SET) != 0) { perror("fseek"); fclose(f); return 1; }
+
   double sum[PAIRS][256] = {{0}};
   u32 num[PAIRS][256] = {{0}};
-  sample_t s;
+  u32 used_samples = 0;
+  u32 ignored_samples = 0;
   for (u32 n = 0; n < h.count; n++) {
     if (fread(&s, sizeof s, 1, f) != 1) { fprintf(stderr, "truncated samples\n"); return 1; }
     if (n == 0) {
       print_note("First sample read from file:");
       print_sample_preview(&s);
     }
+    if (s.t > cutoff) {
+      ignored_samples++;
+      continue;
+    }
+    used_samples++;
     int p = 0;
     for (int i = 0; i < 16; i++)
       for (int j = i + 1; j < 16; j++, p++) {
@@ -525,6 +679,8 @@ static int cmd_attack(int argc, char **argv) {
     }
   }
   fclose(f);
+  print_field_u32("used samples", used_samples);
+  print_field_u32("ignored samples", ignored_samples);
 
   print_note("Converting timing sums into averages.");
   double mean[PAIRS][256];
@@ -535,70 +691,68 @@ static int cmd_attack(int argc, char **argv) {
   print_note("Finding the lowest-average delta for pairs involving byte 0.");
   printf("\n  %-8s %-8s %-14s %-12s\n", "pair", "delta", "avg_time", "observations");
   printf("  %-8s %-8s %-14s %-12s\n", "--------", "--------", "--------------", "------------");
-  u8 off[16] = {0};
+  u8 best_delta[16][16];
+  memset(best_delta, 0, sizeof best_delta);
+  int pp = 0;
+  for (int i = 0; i < 16; i++) {
+    for (int j = i + 1; j < 16; j++, pp++) {
+      int best = 0;
+      for (int d = 1; d < 256; d++) if (mean[pp][d] < mean[pp][best]) best = d;
+      best_delta[i][j] = best_delta[j][i] = (u8)best;
+    }
+  }
+
+  u8 initial[16] = {0};
   for (int j = 1; j < 16; j++) {
     int p = pair_index(0, j);
-    int best = 0;
-    for (int d = 1; d < 256; d++) if (mean[p][d] < mean[p][best]) best = d;
-    off[j] = (u8)best;
+    int best = best_delta[0][j];
+    initial[j] = (u8)best;
     printf("  (0,%2d)   %02x       %-14.3f %-12u\n",
            j, best, mean[p][best], num[p][best]);
   }
-  print_offsets(off);
+  print_offsets(initial);
 
-  print_note("Refining key-byte offsets with local search across all 120 pairs.");
-  printf("\n  %-10s %-16s %-8s\n", "iteration", "score", "changed");
-  printf("  %-10s %-16s %-8s\n", "----------", "----------------", "--------");
-  double best_cost = candidate_cost(off, mean);
-  int changed = 1;
-  int iterations = 0;
-  for (int iter = 0; iter < 200 && changed; iter++) {
-    changed = 0;
-    iterations = iter + 1;
-    for (int b = 1; b < 16; b++) {
-      u8 bestv = off[b];
-      double local = best_cost;
-      for (int v = 0; v < 256; v++) {
-        u8 old = off[b];
-        off[b] = (u8)v;
-        double c = candidate_cost(off, mean);
-        off[b] = old;
-        if (c < local) { local = c; bestv = (u8)v; }
-      }
-      if (bestv != off[b]) {
-        off[b] = bestv;
-        best_cost = local;
-        changed = 1;
-      }
-    }
-    printf("  %-10d %-16.3f %-8s\n",
-           iter + 1, best_cost, changed ? "yes" : "no");
-  }
-  print_field_u32("local search iterations", (u32)iterations);
-  print_offsets(off);
+  print_note("Refining key-byte offsets with multi-start local search.");
+  printf("\n  %-8s %-12s %-16s %-10s\n", "start", "kind", "score", "iterations");
+  printf("  %-8s %-12s %-16s %-10s\n", "--------", "------------", "----------------", "----------");
 
-  print_note("Trying 256 possibilities for final_round_key[0].");
-  print_note("Each final-round key candidate is reversed to a raw AES key and checked.");
-  for (int k0 = 0; k0 < 256; k0++) {
-    u8 last[16], raw[16], w[176], check[16];
-    for (int i = 0; i < 16; i++) last[i] = (u8)(k0 ^ off[i]);
-    invert_last_round_key(last, raw);
-    key_expand(raw, w);
-    encrypt_block(h.verifier_p, check, w);
-    if (!memcmp(check, h.verifier_c, 16)) {
-      if (write_file_exact(out, raw, 16)) { perror(out); return 1; }
-      print_field_prefix("verified candidate k0");
-      printf("%02x\n", k0);
-      print_hex("recovered_key=", raw);
-      print_hex("round10_key=", last);
-      print_field_u32("samples", h.count);
-      print_field_double("score", best_cost);
-      print_field_str("out", out);
-      printf("  %sSUCCESS%s recovered key verified against the stored plaintext/ciphertext pair.\n",
-             clr_ok, clr_reset);
-      return 0;
+  u8 global_best[16], off[16];
+  memcpy(global_best, initial, 16);
+  double global_cost = 1e300;
+  int start_index = 0;
+
+  for (int start = 0; start < 81; start++) {
+    const char *kind = "random";
+    memset(off, 0, sizeof off);
+    if (start == 0) {
+      memcpy(off, initial, 16);
+      kind = "byte0";
+    } else if (start <= 16) {
+      int anchor = start - 1;
+      kind = "anchor";
+      off[anchor] = best_delta[0][anchor];
+      for (int j = 1; j < 16; j++) {
+        if (j == anchor) continue;
+        off[j] = (u8)(off[anchor] ^ best_delta[anchor][j]);
+      }
+    } else {
+      for (int j = 1; j < 16; j++) off[j] = (u8)(rand() & 255);
     }
+
+    int iterations = 0;
+    double cost = optimize_offsets(off, mean, &iterations);
+    printf("  %-8d %-12s %-16.3f %-10d\n", start_index, kind, cost, iterations);
+    if (cost < global_cost) {
+      global_cost = cost;
+      memcpy(global_best, off, 16);
+    }
+    int ok = write_verified_candidate(off, &h, out, cost, start_index, iterations);
+    if (ok) return ok == 1 ? 0 : 1;
+    start_index++;
   }
+
+  print_field_double("best unverified score", global_cost);
+  print_offsets(global_best);
 
   fprintf(stderr, "no verified key candidate found\n");
   return 2;
@@ -651,6 +805,10 @@ static int cmd_selftest(void) {
     return 1;
   }
   printf("  %sOK%s AES encryption test passed.\n", clr_ok, clr_reset);
+  ttable_encrypt_block(pt, got, w);
+  print_hex("ttable_ciphertext=", got);
+  if (memcmp(got, want, 16)) return 3;
+  printf("  %sOK%s T-table AES target matches the known vector.\n", clr_ok, clr_reset);
   print_note("Checking that round 10 key can be reversed back to the original key.");
   invert_last_round_key(w + 160, raw);
   print_hex("recovered_from_round10=", raw);
@@ -664,8 +822,8 @@ static void usage(const char *argv0) {
     "usage:\n"
     "  %s selftest\n"
     "  %s keygen [key.bin]\n"
-    "  %s collect [key.bin] [samples.bin] [count] [-real|-demo-leak] [-repeat N]\n"
-    "  %s collect-real [key.bin] [samples.bin] [count] [-demo-leak] [-repeat N]\n"
+    "  %s collect [key.bin] [samples.bin] [count] [-real|-demo-leak] [-repeat N] [-evict-kb KB]\n"
+    "  %s collect-real [key.bin] [samples.bin] [count] [-demo-leak] [-repeat N] [-evict-kb KB]\n"
     "  %s attack-final [samples.bin] [recovered_key.bin]\n"
     "  %s verify [recovered_key.bin] [samples.bin]\n",
     argv0, argv0, argv0, argv0, argv0, argv0);

@@ -190,6 +190,24 @@ Real mode writes real elapsed timer ticks into the sample file, but key recovery
 is not guaranteed. On a modern MacBook, the real timing signal may be too weak or
 too noisy without further tuning.
 
+The current real target uses a table-driven AES implementation for timing
+experiments:
+
+- Four aligned 1024-byte round tables.
+- A separate final-round lookup table.
+- Page-strided final-table entries so the simple exact-collision attack can see
+  a measurable table/cache signal.
+- Outlier filtering during attack analysis, following the paper's practice of
+  ignoring very slow interrupted samples.
+
+The measured real path that has successfully recovered a key on this project is:
+
+```bash
+./aes_lab collect-real key.bin real_samples.bin 200000 -repeat 50 -evict-kb 2048
+./aes_lab attack-final real_samples.bin real_recovered_key.bin
+./aes_lab verify real_recovered_key.bin real_samples.bin
+```
+
 To collect real measured timings with the controlled demo leak:
 
 ```bash
@@ -240,7 +258,7 @@ AES-128 keys are 16 bytes, or 128 bits.
 
 ```bash
 ./aes_lab collect [key.bin] [samples.bin] [count] [-real]
-./aes_lab collect-real [key.bin] [samples.bin] [count] [-demo-leak] [-repeat N]
+./aes_lab collect-real [key.bin] [samples.bin] [count] [-demo-leak] [-repeat N] [-evict-kb KB]
 ```
 
 Generates timing samples.
@@ -270,12 +288,16 @@ Default mode is synthetic:
 Real timing mode:
 
 ```bash
-./aes_lab collect mykey.bin real_samples.bin 262144 -real
+./aes_lab collect-real mykey.bin real_samples.bin 200000 -repeat 50 -evict-kb 2048
 ```
 
-In real mode, the program disturbs cache with an 8 MiB buffer before timing one
-AES encryption. The recorded timing is raw timer ticks from the local machine,
-not fake model output.
+In real mode, the program disturbs cache before timing table-driven AES
+encryption. The recorded timing is raw timer ticks from the local machine, not
+fake model output.
+
+The `-repeat` option repeats cold single-encryption measurements and sums them
+for one sample. The `-evict-kb` option controls how much memory is read before
+each measured encryption to disturb the AES tables.
 
 Real demo-leak mode:
 
@@ -650,9 +672,9 @@ This function measures actual elapsed encryption time.
 
 It:
 
-1. Disturbs cache by reading through an 8 MiB buffer.
+1. Disturbs cache by reading through an eviction buffer.
 2. Starts a timer.
-3. Encrypts one AES block.
+3. Encrypts one AES block with the table-driven AES target.
 4. Touches ciphertext bytes so the compiler cannot ignore the result.
 5. Stops the timer.
 6. Returns raw elapsed timer ticks.
@@ -660,9 +682,9 @@ It:
 On macOS, the timer is `mach_absolute_time()`. On other platforms, the fallback
 uses `clock_gettime()`.
 
-Real timing mode is experimental. It creates genuine timing samples, but the
-current AES code and modern Apple Silicon may not leak a clean enough signal for
-full key recovery without more tuning.
+Real timing mode is experimental. It creates genuine timing samples. On this
+project, key extraction required repeated cold measurements, outlier filtering,
+and the table-driven timing target described above.
 
 ### Real Demo-Leak Timing
 
@@ -736,8 +758,8 @@ This project has both synthetic timing and real timing.
 Synthetic timing is the reliable teaching path. The timing signal is modeled by
 the program instead of measured from real M4 cache behavior.
 
-Real timing is the experimental path. It measures actual elapsed encryption time,
-but recovery may fail because:
+Real timing is the experimental path. It measures actual elapsed encryption time.
+Recovery may still fail if:
 
 - Modern Apple Silicon uses hardware features and cache behavior unlike the old
   Pentium-era systems in the papers.
@@ -746,10 +768,9 @@ but recovery may fail because:
   and a deliberately vulnerable table implementation.
 
 The synthetic mode proves the attack methodology end to end. The natural real
-mode asks whether this local implementation and machine leak enough timing
-signal to recover the key in practice. Demo-leak mode is in between: it uses real
-timing measurements, but with an intentionally vulnerable target so recovery is
-observable.
+mode now uses a table-driven timing target and can recover the key with enough
+samples and repeated cold measurements. Demo-leak mode is separate: it uses real
+timing measurements, but with an intentionally added vulnerability.
 
 ## Common Questions
 
@@ -797,7 +818,7 @@ make test
 Real timing experiment:
 
 ```bash
-./aes_lab collect key.bin real_samples.bin 262144 -real
+./aes_lab collect-real key.bin real_samples.bin 200000 -repeat 50 -evict-kb 2048
 ./aes_lab attack-final real_samples.bin real_recovered_key.bin
 ./aes_lab verify real_recovered_key.bin real_samples.bin
 ```
@@ -833,8 +854,10 @@ time and disk space.
 Possible future improvements:
 
 - Add real-timing calibration and signal-quality reports.
-- Add stronger vulnerable T-table AES behavior for real timing experiments.
-- Add a true T-table AES implementation closer to historical OpenSSL.
+- Implement the expanded final-round attack that handles normal cache-line
+  groups directly.
+- Add a compact final-table mode closer to historical OpenSSL and compare it
+  against the page-strided research target.
 - Add a Bernstein-style profile/correlation workflow.
 - Add input-file plaintext collection.
 - Add CSV export for plotting timing distributions.
