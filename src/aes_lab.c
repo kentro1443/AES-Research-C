@@ -17,8 +17,10 @@
 #define MAGIC 0x41455354494d4531ULL
 #define MODE_SYNTHETIC 1
 #define MODE_REAL 2
+#define MODE_REAL_DEMO_LEAK 3
 #define EVICT_SIZE (8u * 1024u * 1024u)
 #define EVICT_STRIDE 64u
+#define DEMO_LEAK_WORK 800u
 
 typedef unsigned char u8;
 typedef unsigned int u32;
@@ -181,17 +183,6 @@ static void disturb_cache(void) {
   timing_sink = acc;
 }
 
-static u64 real_time_encrypt(const u8 p[16], u8 c[16], const u8 w[176]) {
-  disturb_cache();
-  u64 start = now_ticks();
-  encrypt_block(p, c, w);
-  u8 acc = timing_sink;
-  for (int i = 0; i < 16; i++) acc ^= c[i];
-  timing_sink = acc;
-  u64 end = now_ticks();
-  return end - start;
-}
-
 static void invert_last_round_key(const u8 last[16], u8 raw[16]) {
   u8 w[176] = {0};
   memcpy(w + 160, last, 16);
@@ -323,10 +314,11 @@ static void print_offsets(const u8 off[16]) {
 static const char *mode_name(u32 mode) {
   if (mode == MODE_SYNTHETIC) return "synthetic final-round cache-collision leakage";
   if (mode == MODE_REAL) return "real measured encryption time";
+  if (mode == MODE_REAL_DEMO_LEAK) return "real measured demo leakage";
   return "unknown";
 }
 
-static u64 synthetic_time(const u8 c[16], const u8 last[16]) {
+static int final_round_collisions(const u8 c[16], const u8 last[16]) {
   int collisions = 0;
   for (int i = 0; i < 16; i++) {
     u8 xi = invsbox[c[i] ^ last[i]];
@@ -335,7 +327,37 @@ static u64 synthetic_time(const u8 c[16], const u8 last[16]) {
       if (xi == xj) collisions++;
     }
   }
+  return collisions;
+}
+
+static void demo_leak_delay(const u8 c[16], const u8 last[16]) {
+  int collisions = final_round_collisions(c, last);
+  u32 work = (u32)(PAIRS - collisions) * DEMO_LEAK_WORK;
+  u8 acc = timing_sink;
+  for (u32 i = 0; i < work; i++) {
+    acc ^= sbox[(u8)(i + acc + c[i & 15])];
+  }
+  timing_sink = acc;
+}
+
+static u64 synthetic_time(const u8 c[16], const u8 last[16]) {
+  int collisions = final_round_collisions(c, last);
   return (u64)(100000 - 500 * collisions + (rand() % 61) - 30);
+}
+
+static u64 real_time_encrypt(const u8 p[16], u8 c[16], const u8 w[176],
+                             u32 repeats, int demo_leak) {
+  disturb_cache();
+  u64 start = now_ticks();
+  for (u32 r = 0; r < repeats; r++) {
+    encrypt_block(p, c, w);
+    if (demo_leak) demo_leak_delay(c, w + 160);
+    u8 acc = timing_sink;
+    for (int i = 0; i < 16; i++) acc ^= c[i];
+    timing_sink = acc;
+  }
+  u64 end = now_ticks();
+  return end - start;
 }
 
 static int cmd_keygen(int argc, char **argv) {
@@ -356,9 +378,15 @@ static int cmd_collect(int argc, char **argv) {
   const char *out = argc > 3 ? argv[3] : "samples.bin";
   u32 count = argc > 4 ? (u32)strtoul(argv[4], 0, 0) : (1u << 18);
   u32 mode = !strcmp(argv[1], "collect-real") ? MODE_REAL : MODE_SYNTHETIC;
+  u32 repeats = 1;
   for (int i = 5; i < argc; i++) {
     if (!strcmp(argv[i], "-real") || !strcmp(argv[i], "--real")) mode = MODE_REAL;
+    else if (!strcmp(argv[i], "-demo-leak") || !strcmp(argv[i], "--demo-leak")) mode = MODE_REAL_DEMO_LEAK;
     else if (!strcmp(argv[i], "-synthetic") || !strcmp(argv[i], "--synthetic")) mode = MODE_SYNTHETIC;
+    else if ((!strcmp(argv[i], "-repeat") || !strcmp(argv[i], "--repeat")) && i + 1 < argc) {
+      repeats = (u32)strtoul(argv[++i], 0, 0);
+      if (repeats == 0) repeats = 1;
+    }
   }
   if (count == 0 || count > MAX_SAMPLES) count = (1u << 18);
 
@@ -367,10 +395,16 @@ static int cmd_collect(int argc, char **argv) {
   print_field_str("output file", out);
   print_field_u32("requested samples", count);
   print_field_str("timing mode", mode_name(mode));
-  if (mode == MODE_REAL) {
+  if (mode == MODE_REAL || mode == MODE_REAL_DEMO_LEAK) {
     printf("  %sNOTE%s real mode measures elapsed encryption time on this machine.\n", clr_warn, clr_reset);
-    print_note("Recovery may fail or need many more samples if the timing signal is weak.");
+    if (mode == MODE_REAL) {
+      print_note("Recovery may fail or need many more samples if the timing signal is weak.");
+    } else {
+      print_note("Demo leak mode intentionally adds real timed CPU work tied to final-round collisions.");
+    }
     print_field_u32("cache disturb bytes", EVICT_SIZE);
+    print_field_u32("repeats per sample", repeats);
+    if (mode == MODE_REAL_DEMO_LEAK) print_field_u32("demo leak work unit", DEMO_LEAK_WORK);
   }
 
   u8 key[16], w[176];
@@ -399,8 +433,8 @@ static int cmd_collect(int argc, char **argv) {
   sample_t s;
   for (u32 i = 0; i < count; i++) {
     random_bytes(s.p, 16);
-    if (mode == MODE_REAL) {
-      s.t = real_time_encrypt(s.p, s.c, w);
+    if (mode == MODE_REAL || mode == MODE_REAL_DEMO_LEAK) {
+      s.t = real_time_encrypt(s.p, s.c, w, repeats, mode == MODE_REAL_DEMO_LEAK);
     } else {
       encrypt_block(s.p, s.c, w);
       s.t = synthetic_time(s.c, w + 160);
@@ -459,6 +493,9 @@ static int cmd_attack(int argc, char **argv) {
   print_field_str("timing mode", mode_name(h.mode));
   if (h.mode == MODE_REAL) {
     printf("  %sNOTE%s real timing mode is experimental; recovery is not guaranteed.\n",
+           clr_warn, clr_reset);
+  } else if (h.mode == MODE_REAL_DEMO_LEAK) {
+    printf("  %sNOTE%s demo leak mode is real measured time with an intentional vulnerability.\n",
            clr_warn, clr_reset);
   }
   print_hex("verifier_plaintext=", h.verifier_p);
@@ -627,8 +664,8 @@ static void usage(const char *argv0) {
     "usage:\n"
     "  %s selftest\n"
     "  %s keygen [key.bin]\n"
-    "  %s collect [key.bin] [samples.bin] [count] [-real]\n"
-    "  %s collect-real [key.bin] [samples.bin] [count]\n"
+    "  %s collect [key.bin] [samples.bin] [count] [-real|-demo-leak] [-repeat N]\n"
+    "  %s collect-real [key.bin] [samples.bin] [count] [-demo-leak] [-repeat N]\n"
     "  %s attack-final [samples.bin] [recovered_key.bin]\n"
     "  %s verify [recovered_key.bin] [samples.bin]\n",
     argv0, argv0, argv0, argv0, argv0, argv0);

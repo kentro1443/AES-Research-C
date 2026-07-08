@@ -33,6 +33,9 @@ This lab supports two timing modes:
   attack pipeline is easy to learn and reproduce.
 - Real timing, which measures elapsed encryption time on your machine and is
   experimental.
+- Real demo-leak timing, which also measures elapsed time but intentionally adds
+  vulnerable CPU work tied to final-round collisions so the full measured-time
+  recovery can be demonstrated.
 
 The default synthetic mode models the situation like this:
 
@@ -187,6 +190,15 @@ Real mode writes real elapsed timer ticks into the sample file, but key recovery
 is not guaranteed. On a modern MacBook, the real timing signal may be too weak or
 too noisy without further tuning.
 
+To collect real measured timings with the controlled demo leak:
+
+```bash
+./aes_lab collect-real key.bin demo_samples.bin 50000 -demo-leak
+```
+
+This is still real measurement, but the target implementation is intentionally
+made more vulnerable so the attack has a visible timing signal.
+
 ## Command Reference
 
 ### `selftest`
@@ -228,7 +240,7 @@ AES-128 keys are 16 bytes, or 128 bits.
 
 ```bash
 ./aes_lab collect [key.bin] [samples.bin] [count] [-real]
-./aes_lab collect-real [key.bin] [samples.bin] [count]
+./aes_lab collect-real [key.bin] [samples.bin] [count] [-demo-leak] [-repeat N]
 ```
 
 Generates timing samples.
@@ -264,6 +276,23 @@ Real timing mode:
 In real mode, the program disturbs cache with an 8 MiB buffer before timing one
 AES encryption. The recorded timing is raw timer ticks from the local machine,
 not fake model output.
+
+Real demo-leak mode:
+
+```bash
+./aes_lab collect-real mykey.bin demo_samples.bin 50000 -demo-leak
+```
+
+In demo-leak mode, the program still records raw timer ticks. The difference is
+that the measured target intentionally does extra CPU work depending on
+final-round collision behavior. This creates a clear side-channel signal for the
+attack to recover.
+
+You can also amplify real timing with repeated encryptions per sample:
+
+```bash
+./aes_lab collect-real mykey.bin real_samples.bin 262144 -repeat 100
+```
 
 During collection, the program prints:
 
@@ -635,6 +664,24 @@ Real timing mode is experimental. It creates genuine timing samples, but the
 current AES code and modern Apple Silicon may not leak a clean enough signal for
 full key recovery without more tuning.
 
+### Real Demo-Leak Timing
+
+```c
+static void demo_leak_delay(const u8 c[16], const u8 last[16])
+```
+
+Demo-leak mode is deliberately vulnerable. It measures real elapsed time, but it
+adds real CPU work based on final-round collision count:
+
+```text
+more final-round collisions -> less extra work -> lower measured time
+fewer final-round collisions -> more extra work -> higher measured time
+```
+
+This is not a natural M4 cache leak. It is a controlled vulnerable target used
+to prove that the measured-time pipeline can recover a key when a real timing
+signal exists.
+
 ### Collection Command
 
 ```c
@@ -689,8 +736,8 @@ This project has both synthetic timing and real timing.
 Synthetic timing is the reliable teaching path. The timing signal is modeled by
 the program instead of measured from real M4 cache behavior.
 
-Real timing is the experimental path. It measures actual elapsed encryption
-time, but recovery may fail because:
+Real timing is the experimental path. It measures actual elapsed encryption time,
+but recovery may fail because:
 
 - Modern Apple Silicon uses hardware features and cache behavior unlike the old
   Pentium-era systems in the papers.
@@ -698,9 +745,11 @@ time, but recovery may fail because:
 - Real cache timing requires careful calibration, CPU pinning, eviction logic,
   and a deliberately vulnerable table implementation.
 
-The synthetic mode proves the attack methodology end to end. The real mode
-answers a different question: whether this local implementation and machine leak
-enough timing signal to recover the key in practice.
+The synthetic mode proves the attack methodology end to end. The natural real
+mode asks whether this local implementation and machine leak enough timing
+signal to recover the key in practice. Demo-leak mode is in between: it uses real
+timing measurements, but with an intentionally vulnerable target so recovery is
+observable.
 
 ## Common Questions
 
@@ -756,6 +805,17 @@ Real timing experiment:
 If the attack fails in real mode, that does not mean AES is broken or the code is
 broken. It usually means the measured signal is too noisy or too weak for this
 simple collection strategy.
+
+Real measured demo-leak experiment:
+
+```bash
+./aes_lab collect-real key.bin demo_samples.bin 50000 -demo-leak
+./aes_lab attack-final demo_samples.bin demo_recovered_key.bin
+./aes_lab verify demo_recovered_key.bin demo_samples.bin
+```
+
+This should recover the key because the target deliberately contains a visible
+timing leak.
 
 To try a larger sample count:
 
