@@ -1,0 +1,7 @@
+make clean
+make
+./aes_lab selftest
+./aes_lab keygen key.bin
+./aes_lab collect-real key.bin samples.bin 500000 -repeat 50 -evict-kb 2048
+./aes_lab attack-final samples.bin final.bin
+./aes_lab verify final.bin samples.bin
