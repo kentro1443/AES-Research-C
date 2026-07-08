@@ -17,10 +17,8 @@
 #define MAGIC 0x41455354494d4531ULL
 #define MODE_SYNTHETIC 1
 #define MODE_REAL 2
-#define MODE_REAL_DEMO_LEAK 3
 #define DEFAULT_EVICT_SIZE (256u * 1024u)
 #define EVICT_STRIDE 64u
-#define DEMO_LEAK_WORK 800u
 #define FINAL_STRIDE 4096u
 
 typedef unsigned char u8;
@@ -388,7 +386,6 @@ static void print_offsets(const u8 off[16]) {
 static const char *mode_name(u32 mode) {
   if (mode == MODE_SYNTHETIC) return "synthetic final-round cache-collision leakage";
   if (mode == MODE_REAL) return "real measured encryption time";
-  if (mode == MODE_REAL_DEMO_LEAK) return "real measured demo leakage";
   return "unknown";
 }
 
@@ -404,29 +401,17 @@ static int final_round_collisions(const u8 c[16], const u8 last[16]) {
   return collisions;
 }
 
-static void demo_leak_delay(const u8 c[16], const u8 last[16]) {
-  int collisions = final_round_collisions(c, last);
-  u32 work = (u32)(PAIRS - collisions) * DEMO_LEAK_WORK;
-  u8 acc = timing_sink;
-  for (u32 i = 0; i < work; i++) {
-    acc ^= sbox[(u8)(i + acc + c[i & 15])];
-  }
-  timing_sink = acc;
-}
-
 static u64 synthetic_time(const u8 c[16], const u8 last[16]) {
   int collisions = final_round_collisions(c, last);
   return (u64)(100000 - 500 * collisions + (rand() % 61) - 30);
 }
 
-static u64 real_time_encrypt(const u8 p[16], u8 c[16], const u8 w[176],
-                             u32 repeats, int demo_leak) {
+static u64 real_time_encrypt(const u8 p[16], u8 c[16], const u8 w[176], u32 repeats) {
   u64 total = 0;
   for (u32 r = 0; r < repeats; r++) {
     disturb_cache();
     u64 start = now_ticks();
     ttable_encrypt_block(p, c, w);
-    if (demo_leak) demo_leak_delay(c, w + 160);
     u8 acc = timing_sink;
     for (int i = 0; i < 16; i++) acc ^= c[i];
     timing_sink = acc;
@@ -453,18 +438,36 @@ static int cmd_collect(int argc, char **argv) {
   const char *keyfile = argc > 2 ? argv[2] : "key.bin";
   const char *out = argc > 3 ? argv[3] : "samples.bin";
   u32 count = argc > 4 ? (u32)strtoul(argv[4], 0, 0) : (1u << 18);
-  u32 mode = !strcmp(argv[1], "collect-real") ? MODE_REAL : MODE_SYNTHETIC;
+  int real_mode = !strcmp(argv[1], "collect-real");
+  u32 mode = real_mode ? MODE_REAL : MODE_SYNTHETIC;
   u32 repeats = 1;
   for (int i = 5; i < argc; i++) {
-    if (!strcmp(argv[i], "-real") || !strcmp(argv[i], "--real")) mode = MODE_REAL;
-    else if (!strcmp(argv[i], "-demo-leak") || !strcmp(argv[i], "--demo-leak")) mode = MODE_REAL_DEMO_LEAK;
-    else if (!strcmp(argv[i], "-synthetic") || !strcmp(argv[i], "--synthetic")) mode = MODE_SYNTHETIC;
-    else if ((!strcmp(argv[i], "-repeat") || !strcmp(argv[i], "--repeat")) && i + 1 < argc) {
+    if (!strcmp(argv[i], "-real") || !strcmp(argv[i], "--real")) {
+      fprintf(stderr, "error: -real was removed; use the collect-real command instead.\n");
+      return 100;
+    } else if (!strcmp(argv[i], "-demo-leak") || !strcmp(argv[i], "--demo-leak")) {
+      fprintf(stderr, "error: -demo-leak was removed; this lab now keeps measured timing pure.\n");
+      return 100;
+    } else if (!strcmp(argv[i], "-synthetic") || !strcmp(argv[i], "--synthetic")) {
+      fprintf(stderr, "error: -synthetic was removed; use the collect command instead.\n");
+      return 100;
+    } else if ((!strcmp(argv[i], "-repeat") || !strcmp(argv[i], "--repeat")) && i + 1 < argc) {
+      if (!real_mode) {
+        fprintf(stderr, "error: -repeat only applies to collect-real.\n");
+        return 100;
+      }
       repeats = (u32)strtoul(argv[++i], 0, 0);
       if (repeats == 0) repeats = 1;
     } else if ((!strcmp(argv[i], "-evict-kb") || !strcmp(argv[i], "--evict-kb")) && i + 1 < argc) {
+      if (!real_mode) {
+        fprintf(stderr, "error: -evict-kb only applies to collect-real.\n");
+        return 100;
+      }
       u32 kb = (u32)strtoul(argv[++i], 0, 0);
       if (kb > 0) evict_size = (size_t)kb * 1024u;
+    } else {
+      fprintf(stderr, "error: unknown collection option: %s\n", argv[i]);
+      return 100;
     }
   }
   if (count == 0 || count > MAX_SAMPLES) count = (1u << 18);
@@ -474,17 +477,12 @@ static int cmd_collect(int argc, char **argv) {
   print_field_str("output file", out);
   print_field_u32("requested samples", count);
   print_field_str("timing mode", mode_name(mode));
-  if (mode == MODE_REAL || mode == MODE_REAL_DEMO_LEAK) {
+  if (mode == MODE_REAL) {
     print_field_str("target AES", "aligned T-table AES with separate final table");
     printf("  %sNOTE%s real mode measures elapsed encryption time on this machine.\n", clr_warn, clr_reset);
-    if (mode == MODE_REAL) {
-      print_note("Recovery may fail or need many more samples if the timing signal is weak.");
-    } else {
-      print_note("Demo leak mode intentionally adds real timed CPU work tied to final-round collisions.");
-    }
+    print_note("Recovery may fail or need many more samples if the timing signal is weak.");
     print_field_u64("cache disturb bytes", (u64)evict_size);
     print_field_u32("repeats per sample", repeats);
-    if (mode == MODE_REAL_DEMO_LEAK) print_field_u32("demo leak work unit", DEMO_LEAK_WORK);
   }
 
   u8 key[16], w[176];
@@ -513,8 +511,8 @@ static int cmd_collect(int argc, char **argv) {
   sample_t s;
   for (u32 i = 0; i < count; i++) {
     random_bytes(s.p, 16);
-    if (mode == MODE_REAL || mode == MODE_REAL_DEMO_LEAK) {
-      s.t = real_time_encrypt(s.p, s.c, w, repeats, mode == MODE_REAL_DEMO_LEAK);
+    if (mode == MODE_REAL) {
+      s.t = real_time_encrypt(s.p, s.c, w, repeats);
     } else {
       encrypt_block(s.p, s.c, w);
       s.t = synthetic_time(s.c, w + 160);
@@ -628,9 +626,6 @@ static int cmd_attack(int argc, char **argv) {
   print_field_str("timing mode", mode_name(h.mode));
   if (h.mode == MODE_REAL) {
     printf("  %sNOTE%s real timing mode is experimental; recovery is not guaranteed.\n",
-           clr_warn, clr_reset);
-  } else if (h.mode == MODE_REAL_DEMO_LEAK) {
-    printf("  %sNOTE%s demo leak mode is real measured time with an intentional vulnerability.\n",
            clr_warn, clr_reset);
   }
   print_hex("verifier_plaintext=", h.verifier_p);
@@ -822,8 +817,8 @@ static void usage(const char *argv0) {
     "usage:\n"
     "  %s selftest\n"
     "  %s keygen [key.bin]\n"
-    "  %s collect [key.bin] [samples.bin] [count] [-real|-demo-leak] [-repeat N] [-evict-kb KB]\n"
-    "  %s collect-real [key.bin] [samples.bin] [count] [-demo-leak] [-repeat N] [-evict-kb KB]\n"
+    "  %s collect [key.bin] [samples.bin] [count]\n"
+    "  %s collect-real [key.bin] [samples.bin] [count] [-repeat N] [-evict-kb KB]\n"
     "  %s attack-final [samples.bin] [recovered_key.bin]\n"
     "  %s verify [recovered_key.bin] [samples.bin]\n",
     argv0, argv0, argv0, argv0, argv0, argv0);

@@ -9,8 +9,8 @@ encryption samples, to timing analysis, to recovering the AES key.
 
 Important: this project does not attack your Mac's built-in AES implementation.
 Modern systems usually use hardware AES or constant-time software. This lab uses
-a deliberately leaky timing model so the full statistical attack pipeline can be
-learned and reproduced safely on a local machine.
+its own table-driven AES timing target so the full statistical attack pipeline
+can be learned and reproduced safely on a local machine.
 
 ## What This Project Demonstrates
 
@@ -33,9 +33,6 @@ This lab supports two timing modes:
   attack pipeline is easy to learn and reproduce.
 - Real timing, which measures elapsed encryption time on your machine and is
   experimental.
-- Real demo-leak timing, which also measures elapsed time but intentionally adds
-  vulnerable CPU work tied to final-round collisions so the full measured-time
-  recovery can be demonstrated.
 
 The default synthetic mode models the situation like this:
 
@@ -177,12 +174,6 @@ relationships it is using.
 To collect real measured timings instead of synthetic timing:
 
 ```bash
-./aes_lab collect key.bin real_samples.bin 262144 -real
-```
-
-or:
-
-```bash
 ./aes_lab collect-real key.bin real_samples.bin 262144
 ```
 
@@ -207,15 +198,6 @@ The measured real path that has successfully recovered a key on this project is:
 ./aes_lab attack-final real_samples.bin real_recovered_key.bin
 ./aes_lab verify real_recovered_key.bin real_samples.bin
 ```
-
-To collect real measured timings with the controlled demo leak:
-
-```bash
-./aes_lab collect-real key.bin demo_samples.bin 50000 -demo-leak
-```
-
-This is still real measurement, but the target implementation is intentionally
-made more vulnerable so the attack has a visible timing signal.
 
 ## Command Reference
 
@@ -257,8 +239,8 @@ AES-128 keys are 16 bytes, or 128 bits.
 ### `collect`
 
 ```bash
-./aes_lab collect [key.bin] [samples.bin] [count] [-real]
-./aes_lab collect-real [key.bin] [samples.bin] [count] [-demo-leak] [-repeat N] [-evict-kb KB]
+./aes_lab collect [key.bin] [samples.bin] [count]
+./aes_lab collect-real [key.bin] [samples.bin] [count] [-repeat N] [-evict-kb KB]
 ```
 
 Generates timing samples.
@@ -298,17 +280,6 @@ fake model output.
 The `-repeat` option repeats cold single-encryption measurements and sums them
 for one sample. The `-evict-kb` option controls how much memory is read before
 each measured encryption to disturb the AES tables.
-
-Real demo-leak mode:
-
-```bash
-./aes_lab collect-real mykey.bin demo_samples.bin 50000 -demo-leak
-```
-
-In demo-leak mode, the program still records raw timer ticks. The difference is
-that the measured target intentionally does extra CPU work depending on
-final-round collision behavior. This creates a clear side-channel signal for the
-attack to recover.
 
 You can also amplify real timing with repeated encryptions per sample:
 
@@ -826,17 +797,6 @@ Real timing experiment:
 If the attack fails in real mode, that does not mean AES is broken or the code is
 broken. It usually means the measured signal is too noisy or too weak for this
 simple collection strategy.
-
-Real measured demo-leak experiment:
-
-```bash
-./aes_lab collect-real key.bin demo_samples.bin 50000 -demo-leak
-./aes_lab attack-final demo_samples.bin demo_recovered_key.bin
-./aes_lab verify demo_recovered_key.bin demo_samples.bin
-```
-
-This should recover the key because the target deliberately contains a visible
-timing leak.
 
 To try a larger sample count:
 

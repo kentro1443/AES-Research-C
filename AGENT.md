@@ -12,8 +12,6 @@ It contains:
 - A table-driven AES timing target used for real timing experiments.
 - A synthetic timing mode used only to validate the statistical recovery
   pipeline.
-- A measured demo-leak mode used only to show a deliberately vulnerable timed
-  target.
 - A final-round timing attack that recovers the final AES round key, reverses
   the AES-128 key schedule, and verifies the recovered raw key.
 
@@ -25,11 +23,11 @@ Always be explicit about which timing mode is being used.
 
 - Synthetic mode is artificial. It models timing leakage and should not be
   described as real measurement.
-- Demo-leak mode records real elapsed time, but the target intentionally adds a
-  vulnerability. It should not be described as a natural cache-timing leak.
-- Natural real mode records real elapsed time from the table-driven timing
-  target. This is the closest mode to the paper-style methodology currently in
-  the repo.
+- Real mode records elapsed time from the table-driven timing target. It must be
+  collected with `collect-real`; do not reintroduce `collect -real`.
+- Do not reintroduce demo-leak behavior or any intentional timing delay tied to
+  the secret key. If a future experiment adds a vulnerable target, document it
+  as a separate artificial target rather than mixing it with pure measurement.
 
 Do not claim the project breaks AES itself. It studies vulnerable
 implementations and timing side channels.
@@ -87,15 +85,6 @@ Natural real timing mode:
 This measures real elapsed time from the table-driven timing target. It is the
 mode to use when the user asks for pure timing measurement.
 
-Measured demo-leak mode:
-
-```bash
-./aes_lab collect-real key.bin demo_samples.bin 50000 -demo-leak
-```
-
-This uses real measurement but intentionally adds timed work tied to final-round
-collisions. Treat it as a controlled demonstration, not paper-faithful evidence.
-
 ## Known Successful Pure Real-Timing Recipe
 
 A successful natural real-timing extraction was achieved with:
@@ -147,4 +136,3 @@ The attack uses final-round ciphertext/timing correlations:
   research target.
 - Add reproducible benchmark scripts for multiple sample counts.
 - Add optional CSV exports for plotting timing distributions.
-
