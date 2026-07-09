@@ -636,7 +636,7 @@ This is the educational stand-in for real CPU cache timing.
 ### Real Timing Leakage
 
 ```c
-static u64 real_time_encrypt(const u8 p[16], u8 c[16], const u8 w[176])
+static u64 real_time_encrypt(const u8 p[16], u8 c[16], const u8 w[176], u32 repeats)
 ```
 
 This function measures actual elapsed encryption time.
@@ -656,24 +656,6 @@ uses `clock_gettime()`.
 Real timing mode is experimental. It creates genuine timing samples. On this
 project, key extraction required repeated cold measurements, outlier filtering,
 and the table-driven timing target described above.
-
-### Real Demo-Leak Timing
-
-```c
-static void demo_leak_delay(const u8 c[16], const u8 last[16])
-```
-
-Demo-leak mode is deliberately vulnerable. It measures real elapsed time, but it
-adds real CPU work based on final-round collision count:
-
-```text
-more final-round collisions -> less extra work -> lower measured time
-fewer final-round collisions -> more extra work -> higher measured time
-```
-
-This is not a natural M4 cache leak. It is a controlled vulnerable target used
-to prove that the measured-time pipeline can recover a key when a real timing
-signal exists.
 
 ### Collection Command
 
@@ -740,8 +722,7 @@ Recovery may still fail if:
 
 The synthetic mode proves the attack methodology end to end. The natural real
 mode now uses a table-driven timing target and can recover the key with enough
-samples and repeated cold measurements. Demo-leak mode is separate: it uses real
-timing measurements, but with an intentionally added vulnerability.
+samples and repeated cold measurements.
 
 ## Common Questions
 

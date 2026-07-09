@@ -101,6 +101,10 @@ static const u8 invsbox[256] = {
 
 static const u8 rcon[10] = {0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36};
 
+static const u8 shift_rows_perm[16] = {
+  0, 5, 10, 15, 4, 9, 14, 3, 8, 13, 2, 7, 12, 1, 6, 11
+};
+
 static u8 xtime(u8 x) { return (u8)((x << 1) ^ ((x >> 7) * 0x1b)); }
 static u8 mul3(u8 x) { return (u8)(xtime(x) ^ x); }
 
@@ -114,10 +118,7 @@ static void sub_bytes(u8 s[16]) {
 
 static void shift_rows(u8 s[16]) {
   u8 t[16];
-  t[0]=s[0]; t[1]=s[5]; t[2]=s[10]; t[3]=s[15];
-  t[4]=s[4]; t[5]=s[9]; t[6]=s[14]; t[7]=s[3];
-  t[8]=s[8]; t[9]=s[13]; t[10]=s[2]; t[11]=s[7];
-  t[12]=s[12]; t[13]=s[1]; t[14]=s[6]; t[15]=s[11];
+  for (int i = 0; i < 16; i++) t[i] = s[shift_rows_perm[i]];
   memcpy(s, t, 16);
 }
 
@@ -206,22 +207,8 @@ static void ttable_encrypt_block(const u8 in[16], u8 out[16], const u8 w[176]) {
     memcpy(s, t, 16);
   }
   const u8 *rk = w + 160;
-  out[0]  = (u8)(final_table[s[0]][0]  ^ rk[0]);
-  out[1]  = (u8)(final_table[s[5]][0]  ^ rk[1]);
-  out[2]  = (u8)(final_table[s[10]][0] ^ rk[2]);
-  out[3]  = (u8)(final_table[s[15]][0] ^ rk[3]);
-  out[4]  = (u8)(final_table[s[4]][0]  ^ rk[4]);
-  out[5]  = (u8)(final_table[s[9]][0]  ^ rk[5]);
-  out[6]  = (u8)(final_table[s[14]][0] ^ rk[6]);
-  out[7]  = (u8)(final_table[s[3]][0]  ^ rk[7]);
-  out[8]  = (u8)(final_table[s[8]][0]  ^ rk[8]);
-  out[9]  = (u8)(final_table[s[13]][0] ^ rk[9]);
-  out[10] = (u8)(final_table[s[2]][0]  ^ rk[10]);
-  out[11] = (u8)(final_table[s[7]][0]  ^ rk[11]);
-  out[12] = (u8)(final_table[s[12]][0] ^ rk[12]);
-  out[13] = (u8)(final_table[s[1]][0]  ^ rk[13]);
-  out[14] = (u8)(final_table[s[6]][0]  ^ rk[14]);
-  out[15] = (u8)(final_table[s[11]][0] ^ rk[15]);
+  for (int i = 0; i < 16; i++)
+    out[i] = (u8)(final_table[s[shift_rows_perm[i]]][0] ^ rk[i]);
 }
 
 static u64 now_ticks(void) {
@@ -421,8 +408,12 @@ static u64 real_time_encrypt(const u8 p[16], u8 c[16], const u8 w[176], u32 repe
   return total;
 }
 
+static const char *arg_str(int argc, char **argv, int idx, const char *def) {
+  return argc > idx ? argv[idx] : def;
+}
+
 static int cmd_keygen(int argc, char **argv) {
-  const char *out = argc > 2 ? argv[2] : "key.bin";
+  const char *out = arg_str(argc, argv, 2, "key.bin");
   u8 key[16];
   print_step("Key generation");
   print_note("Generating one random AES-128 key from /dev/urandom.");
@@ -435,8 +426,8 @@ static int cmd_keygen(int argc, char **argv) {
 }
 
 static int cmd_collect(int argc, char **argv) {
-  const char *keyfile = argc > 2 ? argv[2] : "key.bin";
-  const char *out = argc > 3 ? argv[3] : "samples.bin";
+  const char *keyfile = arg_str(argc, argv, 2, "key.bin");
+  const char *out = arg_str(argc, argv, 3, "samples.bin");
   u32 count = argc > 4 ? (u32)strtoul(argv[4], 0, 0) : (1u << 18);
   int real_mode = !strcmp(argv[1], "collect-real");
   u32 mode = real_mode ? MODE_REAL : MODE_SYNTHETIC;
@@ -608,8 +599,8 @@ static int write_verified_candidate(const u8 off[16], const sample_header_t *h,
 }
 
 static int cmd_attack(int argc, char **argv) {
-  const char *samples_path = argc > 2 ? argv[2] : "samples.bin";
-  const char *out = argc > 3 ? argv[3] : "recovered_key.bin";
+  const char *samples_path = arg_str(argc, argv, 2, "samples.bin");
+  const char *out = arg_str(argc, argv, 3, "recovered_key.bin");
   print_step("Final-round timing attack");
   print_field_str("sample file", samples_path);
   print_field_str("recovered key out", out);
@@ -754,8 +745,8 @@ static int cmd_attack(int argc, char **argv) {
 }
 
 static int cmd_verify(int argc, char **argv) {
-  const char *keyfile = argc > 2 ? argv[2] : "recovered_key.bin";
-  const char *samples_path = argc > 3 ? argv[3] : "samples.bin";
+  const char *keyfile = arg_str(argc, argv, 2, "recovered_key.bin");
+  const char *samples_path = arg_str(argc, argv, 3, "samples.bin");
   u8 key[16], w[176], check[16];
   print_step("Recovered key verification");
   print_field_str("candidate key file", keyfile);
@@ -829,8 +820,7 @@ int main(int argc, char **argv) {
   if (argc < 2) { usage(argv[0]); return 100; }
   if (!strcmp(argv[1], "selftest")) return cmd_selftest();
   if (!strcmp(argv[1], "keygen")) return cmd_keygen(argc, argv);
-  if (!strcmp(argv[1], "collect")) return cmd_collect(argc, argv);
-  if (!strcmp(argv[1], "collect-real")) return cmd_collect(argc, argv);
+  if (!strcmp(argv[1], "collect") || !strcmp(argv[1], "collect-real")) return cmd_collect(argc, argv);
   if (!strcmp(argv[1], "attack-final")) return cmd_attack(argc, argv);
   if (!strcmp(argv[1], "verify")) return cmd_verify(argc, argv);
   usage(argv[0]);
