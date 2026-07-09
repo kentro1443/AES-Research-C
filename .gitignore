@@ -1,4 +1,5 @@
 aes_lab
+aes_lab_go
 *.bin
 *.o
 .DS_Store
