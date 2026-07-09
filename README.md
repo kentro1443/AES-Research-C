@@ -109,11 +109,18 @@ The entire research lab program. It includes:
 
 The program is built as one command-line tool called `aes_lab`.
 
+### `go/main.go`
+
+A Go port of the same lab, mirroring `src/aes_lab.c` function-for-function
+(same AES core, same T-table timing target, same final-round attack, same
+CLI commands). See [Go Port](#go-port) below for details.
+
 ### `.gitignore`
 
 Keeps generated files out of git:
 
 - `aes_lab`
+- `aes_lab_go`
 - `*.bin`
 - `*.o`
 - `.DS_Store`
@@ -199,7 +206,119 @@ The measured real path that has successfully recovered a key on this project is:
 ./aes_lab verify real_recovered_key.bin real_samples.bin
 ```
 
+## Go Port
+
+`go/main.go` is a from-scratch Go port of the exact same lab: same AES-128
+core, same T-table timing target, same final-round cache-collision attack,
+same CLI commands, and a byte-compatible `.bin` file format. It's a second
+independent implementation of the identical research, not a wrapper around
+the C binary.
+
+### Build
+
+Requires Go 1.21+.
+
+```bash
+cd go
+go build -o aes_lab_go .
+```
+
+This produces `aes_lab_go`, sitting alongside (and git-ignored the same way
+as) the C binary `aes_lab`. Every command below works identically:
+
+```bash
+cd go
+go run . selftest
+```
+
+### Commands are identical
+
+`aes_lab_go` accepts the exact same commands, arguments, defaults, usage
+text, and exit codes as `aes_lab` — see [Command
+Reference](#command-reference) below; everything there applies to
+`./aes_lab_go` too. `collect` and `collect-real` behave the same way, with
+the same `-repeat`/`-evict-kb` flags.
+
+### File format is byte-compatible
+
+Sample and key `.bin` files are interchangeable between the two binaries —
+either one can read files the other wrote:
+
+```bash
+# C writes, Go attacks and verifies
+./aes_lab collect key.bin samples.bin 262144
+cd go && ./aes_lab_go attack-final ../samples.bin recovered.bin
+./aes_lab_go verify recovered.bin ../samples.bin
+
+# Go writes, C attacks and verifies
+cd go && ./aes_lab_go collect key.bin samples.bin 262144
+./aes_lab attack-final go/samples.bin recovered.bin
+./aes_lab verify recovered.bin go/samples.bin
+```
+
+Both directions have been verified to work.
+
+### How the timing-sensitive parts were ported
+
+Go has no `volatile` and no `__attribute__((aligned(N)))`, both of which the
+C target relies on for its cache-timing behavior. The Go port's closest
+equivalents:
+
+- **Table alignment**: `te0`..`te3` and `final_table` are over-allocated and
+  aligned to a 4096-byte boundary at runtime via `unsafe.Pointer` arithmetic,
+  in place of the C compiler attribute.
+- **Preventing the compiler from optimizing away table reads**: the
+  timing-critical functions are marked `//go:noinline`, standing in for C's
+  `volatile` pointers.
+- **Timer**: Go's `time.Now()`/`time.Since()` (monotonic clock) in place of
+  `mach_absolute_time()`.
+
+These are best-effort equivalents, not guaranteed-identical semantics — see
+Known Differences below.
+
+### Verified real-timing recovery
+
+A full `keygen -> collect-real -> attack-final -> verify` run has
+successfully recovered a real key from genuine measured timing using the Go
+binary:
+
+```bash
+cd go
+./aes_lab_go keygen key.bin
+./aes_lab_go collect-real key.bin samples.bin 1000000 -repeat 50 -evict-kb 2048
+./aes_lab_go attack-final samples.bin recovered_key.bin
+./aes_lab_go verify recovered_key.bin samples.bin
+```
+
+Note this needed roughly double the sample count of the C recipe's proven
+`200000`/`500000`-sample runs to get a clean signal on the same machine —
+consistent with the differences below. Like the C version, real-mode
+recovery is not guaranteed on every run; if it fails, increase the sample
+count first, then adjust `-repeat`/`-evict-kb`.
+
+### Known differences from the C version
+
+- **Real-timing signal strength**: Go's runtime (garbage collector, no true
+  `volatile`, different inlining/codegen, no `-O3`-equivalent optimizer) can
+  produce a weaker or noisier real-timing signal than clang's. Expect to
+  need more samples for `collect-real` to succeed than the C version needs,
+  as observed above. This is treated as a research finding, not a bug to
+  hide.
+- **`attack-final`'s random local-search restarts are not reproducible the
+  same way across languages.** C's `rand()` is only seeded (`srand`) inside
+  `collect`, so `attack-final`'s random-restart draws are accidentally
+  deterministic across C runs (default libc seed). Go's `math/rand` is
+  always randomly auto-seeded per process, so the Go port's random-restart
+  sequence varies run to run. When comparing the two implementations, average
+  over repeated runs rather than comparing single attempts.
+- **GC pauses** can occasionally inject latency outliers into real-timing
+  measurements that have no C analogue.
+
 ## Command Reference
+
+Commands below are shown as `./aes_lab`, but apply identically to
+`./aes_lab_go` (see [Go Port](#go-port)) — same arguments, same defaults,
+same exit codes.
 
 ### `selftest`
 
