@@ -1,1032 +1,228 @@
-# AES Research C
+# AES Cache-Timing Research Lab
 
-This repository is a small research lab for studying AES cache-timing key
-recovery. It started as a C implementation and now includes equivalent C, Go,
-and Python versions of the same experiment. It is based on the methodology from
-classic AES timing-attack papers, especially final-round cache-collision
-attacks.
+An educational, local-only lab for studying AES-128 cache-timing key recovery.
+The repository contains independent C, Go, and Python implementations of the
+same experiment: generate a key, collect timing samples, recover the final-round
+key statistically, reverse the AES key schedule, and verify the recovered key.
 
-The goal is educational: show the whole pipeline from key generation, to
-encryption samples, to timing analysis, to recovering the AES key.
+This project does **not** break AES itself and does not attack the AES
+implementation provided by your operating system. It uses its own deliberately
+table-driven AES target so that an implementation side channel can be studied
+end to end.
 
-Important: this project does not attack your Mac's built-in AES implementation.
-Modern systems usually use hardware AES or constant-time software. This lab uses
-its own table-driven AES timing target so the full statistical attack pipeline
-can be learned and reproduced safely on a local machine.
+> Use this project only for learning, research, and systems you own or have
+> explicit permission to test. It has no network or remote-probing features.
 
-## What This Project Demonstrates
+## Quick start
 
-AES itself is not being mathematically broken. AES is still considered secure
-when implemented correctly.
+The most reliable introduction is the C implementation with synthetic timing.
+You need a POSIX-like system such as macOS or Linux, `make`, and a C11 compiler.
 
-The weakness studied here is an implementation side channel. A side channel is
-extra information leaked by a program while it runs. In this case, the leaked
-information is timing.
-
-Old high-speed AES implementations often used lookup tables. The table entries
-read during encryption depend on secret internal AES values, which depend on the
-key. CPU memory/cache behavior can make some lookups slightly faster than
-others. If an attacker collects enough encryptions and timings, statistics can
-reveal patterns about the secret key.
-
-This lab supports two timing modes:
-
-- Synthetic timing, which intentionally models the cache-collision signal so the
-  attack pipeline is easy to learn and reproduce.
-- Real timing, which measures elapsed encryption time on your machine and is
-  experimental.
-
-The default synthetic mode models the situation like this:
-
-```text
-plaintext + key -> AES encryption -> ciphertext
-                         |
-                         v
-                  timing-like leakage
-```
-
-The attack then receives many records like this:
-
-```text
-plaintext, ciphertext, timing
-```
-
-From those records, it recovers the original AES-128 key.
-
-## Safety And Scope
-
-Use this only for learning, research, and systems you own or have permission to
-test.
-
-The current implementation is intentionally local:
-
-- It generates a key locally.
-- It encrypts local random plaintext blocks.
-- It writes local sample files.
-- It recovers the locally generated key.
-
-It does not include network probing, malware behavior, privilege escalation, or
-tools for attacking third-party systems.
-
-## Repository Files
-
-### `Makefile`
-
-The build file. It defines three useful commands:
+From the repository root:
 
 ```bash
 make
-```
-
-Builds the program:
-
-```text
-src/aes_lab.c -> aes_lab
-```
-
-```bash
-make test
-```
-
-Builds the program and runs the built-in AES self-test.
-
-```bash
-make clean
-```
-
-Removes generated local artifacts such as the compiled binary and `.bin` files.
-
-### `src/aes_lab.c`
-
-The entire research lab program. It includes:
-
-- AES-128 encryption.
-- AES key expansion.
-- Reverse key expansion from the final round key.
-- Sample generation.
-- Synthetic timing leakage.
-- Final-round timing analysis.
-- Key recovery.
-- Verification.
-
-The program is built as one command-line tool called `aes_lab`.
-
-### `go/main.go`
-
-A Go port of the same lab, mirroring `src/aes_lab.c` function-for-function
-(same AES core, same T-table timing target, same final-round attack, same
-CLI commands). See [Go Port](#go-port) below for details.
-
-### `python/aes_lab.py`
-
-A standard-library Python port of the same lab. It is designed for readability
-and cross-checking: same AES core, same T-table timing target, same final-round
-attack, same byte-compatible `.bin` files, and the same CLI commands. It also
-has a genuine `collect-real` path that records measured Python execution time.
-See [Python Port](#python-port) below for details.
-
-### `.gitignore`
-
-Keeps generated files out of git:
-
-- `aes_lab`
-- `aes_lab_go`
-- `*.bin`
-- `*.o`
-- `.DS_Store`
-
-This matters because generated `.bin` files may contain secret keys and large
-sample traces. They should not be committed.
-
-## Build Requirements
-
-On macOS, you need a C compiler. Apple's `clang` from Xcode Command Line Tools is
-enough.
-
-Build:
-
-```bash
-make
-```
-
-Run the self-test:
-
-```bash
-make test
-```
-
-Expected output:
-
-```text
-selftest=ok
-```
-
-## Quick Start
-
-From the repository directory:
-
-```bash
-make test
-./aes_lab keygen key.bin
-./aes_lab collect key.bin samples.bin 262144
-./aes_lab attack-final samples.bin recovered_key.bin
-./aes_lab verify recovered_key.bin samples.bin
-```
-
-You should see the generated key, recovered key, and verified key match.
-
-Example shape:
-
-```text
-key=0c77aad2c105ef0530011c4e07fae978
-recovered_key=0c77aad2c105ef0530011c4e07fae978
-verified_key=0c77aad2c105ef0530011c4e07fae978
-```
-
-The program is intentionally verbose and formatted for readability. It prints
-bordered sections, aligned fields, progress bars, compact tables, sample
-previews, verifier plaintext/ciphertext pairs, and the key-recovery
-relationships it is using.
-
-To collect real measured timings instead of synthetic timing:
-
-```bash
-./aes_lab collect-real key.bin real_samples.bin 262144
-```
-
-Real mode writes real elapsed timer ticks into the sample file, but key recovery
-is not guaranteed. On a modern MacBook, the real timing signal may be too weak or
-too noisy without further tuning.
-
-The current real target uses a table-driven AES implementation for timing
-experiments:
-
-- Four aligned 1024-byte round tables.
-- A separate final-round lookup table.
-- Page-strided final-table entries so the simple exact-collision attack can see
-  a measurable table/cache signal.
-- Outlier filtering during attack analysis, following the paper's practice of
-  ignoring very slow interrupted samples.
-
-The measured real path that has successfully recovered a key on this project is:
-
-```bash
-./aes_lab collect-real key.bin real_samples.bin 200000 -repeat 50 -evict-kb 2048
-./aes_lab attack-final real_samples.bin real_recovered_key.bin
-./aes_lab verify real_recovered_key.bin real_samples.bin
-```
-
-The Go and Python versions use the same command names:
-
-```bash
-cd go
-go run . selftest
-go run . collect key.bin samples.bin 262144
-
-cd ..
-python3 python/aes_lab.py selftest
-python3 python/aes_lab.py collect key.bin samples.bin 262144
-```
-
-## Go Port
-
-`go/main.go` is a from-scratch Go port of the exact same lab: same AES-128
-core, same T-table timing target, same final-round cache-collision attack,
-same CLI commands, and a byte-compatible `.bin` file format. It's a second
-independent implementation of the identical research, not a wrapper around
-the C binary.
-
-### Build
-
-Requires Go 1.21+.
-
-```bash
-cd go
-go build -o aes_lab_go .
-```
-
-This produces `aes_lab_go`, sitting alongside (and git-ignored the same way
-as) the C binary `aes_lab`. Every command below works identically:
-
-```bash
-cd go
-go run . selftest
-```
-
-### Commands are identical
-
-`aes_lab_go` accepts the exact same commands, arguments, defaults, usage
-text, and exit codes as `aes_lab` — see [Command
-Reference](#command-reference) below; everything there applies to
-`./aes_lab_go` too. `collect` and `collect-real` behave the same way, with
-the same `-repeat`/`-evict-kb` flags.
-
-### File format is byte-compatible
-
-Sample and key `.bin` files are interchangeable between the two binaries —
-either one can read files the other wrote:
-
-```bash
-# C writes, Go attacks and verifies
-./aes_lab collect key.bin samples.bin 262144
-cd go && ./aes_lab_go attack-final ../samples.bin recovered.bin
-./aes_lab_go verify recovered.bin ../samples.bin
-
-# Go writes, C attacks and verifies
-cd go && ./aes_lab_go collect key.bin samples.bin 262144
-./aes_lab attack-final go/samples.bin recovered.bin
-./aes_lab verify recovered.bin go/samples.bin
-```
-
-Both directions have been verified to work.
-
-Python is byte-compatible too, so sample/key files can be moved among all three
-implementations:
-
-```bash
-# Python writes, C attacks and verifies
-python3 python/aes_lab.py collect key.bin py_samples.bin 262144
-./aes_lab attack-final py_samples.bin recovered.bin
-./aes_lab verify recovered.bin py_samples.bin
-
-# C writes, Python attacks and verifies
-./aes_lab collect key.bin c_samples.bin 262144
-python3 python/aes_lab.py attack-final c_samples.bin recovered.bin
-python3 python/aes_lab.py verify recovered.bin c_samples.bin
-```
-
-### How the timing-sensitive parts were ported
-
-Go has no `volatile` and no `__attribute__((aligned(N)))`, both of which the
-C target relies on for its cache-timing behavior. The Go port's closest
-equivalents:
-
-- **Table alignment**: `te0`..`te3` and `final_table` are over-allocated and
-  aligned to a 4096-byte boundary at runtime via `unsafe.Pointer` arithmetic,
-  in place of the C compiler attribute.
-- **Preventing the compiler from optimizing away table reads**: the
-  timing-critical functions are marked `//go:noinline`, standing in for C's
-  `volatile` pointers.
-- **Timer**: Go's `time.Now()`/`time.Since()` (monotonic clock) in place of
-  `mach_absolute_time()`.
-
-These are best-effort equivalents, not guaranteed-identical semantics — see
-Known Differences below.
-
-### Verified real-timing recovery
-
-A full `keygen -> collect-real -> attack-final -> verify` run has
-successfully recovered a real key from genuine measured timing using the Go
-binary:
-
-```bash
-cd go
-./aes_lab_go keygen key.bin
-./aes_lab_go collect-real key.bin samples.bin 1000000 -repeat 50 -evict-kb 2048
-./aes_lab_go attack-final samples.bin recovered_key.bin
-./aes_lab_go verify recovered_key.bin samples.bin
-```
-
-Note this needed roughly double the sample count of the C recipe's proven
-`200000`/`500000`-sample runs to get a clean signal on the same machine —
-consistent with the differences below. Like the C version, real-mode
-recovery is not guaranteed on every run; if it fails, increase the sample
-count first, then adjust `-repeat`/`-evict-kb`.
-
-### Known differences from the C version
-
-- **Real-timing signal strength**: Go's runtime (garbage collector, no true
-  `volatile`, different inlining/codegen, no `-O3`-equivalent optimizer) can
-  produce a weaker or noisier real-timing signal than clang's. Expect to
-  need more samples for `collect-real` to succeed than the C version needs,
-  as observed above. This is treated as a research finding, not a bug to
-  hide.
-- **`attack-final`'s random local-search restarts are not reproducible the
-  same way across languages.** C's `rand()` is only seeded (`srand`) inside
-  `collect`, so `attack-final`'s random-restart draws are accidentally
-  deterministic across C runs (default libc seed). Go's `math/rand` is
-  always randomly auto-seeded per process, so the Go port's random-restart
-  sequence varies run to run. When comparing the two implementations, average
-  over repeated runs rather than comparing single attempts.
-- **GC pauses** can occasionally inject latency outliers into real-timing
-  measurements that have no C analogue.
-
-## Python Port
-
-`python/aes_lab.py` is a direct Python implementation of the same lab. It is not
-a wrapper around the C or Go binaries.
-
-### Run
-
-Requires Python 3.10+ and no third-party packages.
-
-```bash
-python3 python/aes_lab.py selftest
-python3 python/aes_lab.py keygen key.bin
-python3 python/aes_lab.py collect key.bin samples.bin 262144
-python3 python/aes_lab.py attack-final samples.bin recovered_key.bin
-python3 python/aes_lab.py verify recovered_key.bin samples.bin
-```
-
-### Commands are identical
-
-The Python script accepts the same commands as the C and Go implementations:
-
-```bash
-python3 python/aes_lab.py selftest
-python3 python/aes_lab.py keygen [key.bin]
-python3 python/aes_lab.py collect [key.bin] [samples.bin] [count]
-python3 python/aes_lab.py collect-real [key.bin] [samples.bin] [count] [-repeat N] [-evict-kb KB]
-python3 python/aes_lab.py attack-final [samples.bin] [recovered_key.bin]
-python3 python/aes_lab.py verify [recovered_key.bin] [samples.bin]
-```
-
-### What Python is best for
-
-Python is the easiest version to read while learning the attack:
-
-- AES state transformations are plain list/bytearray operations.
-- The binary format is visible through `struct.Struct("<QII16s16s")` and
-  `struct.Struct("<16s16sQ")`.
-- The attack loop mirrors the C/Go logic without pointer syntax.
-- Cross-language compatibility tests are easy because the `.bin` files are
-  identical.
-
-### Python real timing
-
-Python `collect-real` records genuine measured elapsed time using
-`time.perf_counter_ns()` around the table-driven AES target:
-
-```bash
-python3 python/aes_lab.py collect-real key.bin py_real_samples.bin 500000 -repeat 50 -evict-kb 2048
-python3 python/aes_lab.py attack-final py_real_samples.bin py_real_recovered.bin
-python3 python/aes_lab.py verify py_real_recovered.bin py_real_samples.bin
-```
-
-This is pure measurement, not synthetic leakage. However, Python adds a large
-amount of interpreter/runtime overhead around every table lookup. That overhead
-can drown out the small cache signal that the C and Go versions are trying to
-measure. For reliable real-timing demonstrations, use the C implementation
-first, then use Python to inspect and cross-check the methodology.
-
-## Command Reference
-
-Commands below are shown as `./aes_lab`, but apply identically to
-`./aes_lab_go` (see [Go Port](#go-port)) and `python3 python/aes_lab.py` (see
-[Python Port](#python-port)) — same arguments, same defaults, same exit codes.
-
-### `selftest`
-
-```bash
 ./aes_lab selftest
-```
-
-Checks two things:
-
-1. AES encryption matches a known NIST AES-128 test vector.
-2. Reversing the final round key produces the original key.
-
-If this fails, the rest of the lab should not be trusted.
-
-### `keygen`
-
-```bash
-./aes_lab keygen [key.bin]
-```
-
-Creates a random 16-byte AES-128 key and writes it to a file.
-
-Default output:
-
-```text
-key.bin
-```
-
-Example:
-
-```bash
-./aes_lab keygen mykey.bin
-```
-
-AES-128 keys are 16 bytes, or 128 bits.
-
-### `collect`
-
-```bash
-./aes_lab collect [key.bin] [samples.bin] [count]
-./aes_lab collect-real [key.bin] [samples.bin] [count] [-repeat N] [-evict-kb KB]
-```
-
-Generates timing samples.
-
-For each sample, the program:
-
-1. Generates a random 16-byte plaintext.
-2. Encrypts it with the AES key.
-3. Records either a synthetic timing value or a real measured timing value.
-4. Stores plaintext, ciphertext, and timing in the sample file.
-
-Example:
-
-```bash
-./aes_lab collect mykey.bin mysamples.bin 262144
-```
-
-The sample count should be large because timing attacks are statistical. One
-sample teaches almost nothing. Many samples reveal a pattern.
-
-Default mode is synthetic:
-
-```bash
-./aes_lab collect mykey.bin mysamples.bin 262144
-```
-
-Real timing mode:
-
-```bash
-./aes_lab collect-real mykey.bin real_samples.bin 200000 -repeat 50 -evict-kb 2048
-```
-
-In real mode, the program disturbs cache before timing table-driven AES
-encryption. The recorded timing is raw timer ticks from the local machine, not
-fake model output.
-
-The `-repeat` option repeats cold single-encryption measurements and sums them
-for one sample. The `-evict-kb` option controls how much memory is read before
-each measured encryption to disturb the AES tables.
-
-You can also amplify real timing with repeated encryptions per sample:
-
-```bash
-./aes_lab collect-real mykey.bin real_samples.bin 262144 -repeat 100
-```
-
-During collection, the program prints:
-
-- The loaded AES key.
-- The final AES round key.
-- The verifier plaintext/ciphertext pair.
-- A preview of the first generated sample.
-- A progress bar at 25%, 50%, 75%, and 100%.
-- For `collect-real`, an estimated time remaining on each progress line.
-
-### `attack-final`
-
-```bash
-./aes_lab attack-final [samples.bin] [recovered_key.bin]
-```
-
-Runs the final-round timing attack.
-
-It reads the sample file and tries to recover the original AES key without
-reading the key file.
-
-The attack uses:
-
-```text
-ciphertext + timing
-```
-
-It also uses one plaintext/ciphertext verifier stored in the sample file to
-confirm that the recovered key is correct.
-
-During the attack, the program prints:
-
-- Sample file metadata.
-- The first sample read from disk.
-- A progress bar while building the timing table.
-- A compact table of the best low-time ciphertext delta for each `(0, j)` byte
-  pair.
-- The inferred final-round key offsets from byte 0.
-- A compact local-search table showing score changes.
-- The verified final-round key byte candidate.
-- The recovered original AES key.
-
-### `verify`
-
-```bash
-./aes_lab verify [recovered_key.bin] [samples.bin]
-```
-
-Checks the recovered key against the verifier plaintext/ciphertext pair stored
-inside the sample file.
-
-If verification succeeds, the recovered key is functionally correct for AES.
-
-During verification, the program prints the candidate key, verifier plaintext,
-expected ciphertext, and computed ciphertext so you can see exactly why the key
-is accepted or rejected.
-
-## A Beginner-Friendly Explanation Of The Attack
-
-### 1. AES Uses A Key
-
-AES is a block cipher. For AES-128:
-
-- The plaintext block is 16 bytes.
-- The key is 16 bytes.
-- The ciphertext block is 16 bytes.
-
-Conceptually:
-
-```text
-AES_encrypt(plaintext, key) = ciphertext
-```
-
-If AES is implemented correctly, knowing plaintext and ciphertext should not let
-you recover the key.
-
-### 2. AES Has Rounds
-
-AES does not encrypt in one step. It performs several rounds of transformation.
-For AES-128, there are 10 rounds.
-
-Each round mixes the data with round key material derived from the original key.
-The original key is expanded into many round keys:
-
-```text
-original key -> round key 0 -> round key 1 -> ... -> round key 10
-```
-
-This repository stores all expanded key bytes in a 176-byte array:
-
-```c
-u8 w[176]
-```
-
-### 3. The Final Round Is Special
-
-The final AES round has a simpler structure than the earlier rounds. For each
-ciphertext byte, the relationship is roughly:
-
-```text
-ciphertext_byte = SBOX(secret_internal_byte) XOR final_round_key_byte
-```
-
-That means if we can learn the final round key, we can reverse the AES key
-schedule and recover the original key.
-
-That is exactly what this lab does.
-
-### 4. Timing Leaks A Pattern
-
-In vulnerable table-based AES, internal values are used as indexes into lookup
-tables. Some pairs of lookup indexes collide or line up in cache. Those
-collisions can make encryption slightly faster.
-
-The real-world idea is:
-
-```text
-more cache collisions -> slightly faster encryption
-fewer cache collisions -> slightly slower encryption
-```
-
-This lab uses a synthetic version:
-
-```c
-return 100000 - 500 * collisions + noise;
-```
-
-So more final-round collisions produce lower timing values.
-
-### 5. One Timing Is Not Enough
-
-The timing difference is tiny and noisy. A single encryption does not reveal the
-key.
-
-But if you collect thousands or hundreds of thousands of samples, averages begin
-to expose the pattern.
-
-This is why the quick start uses:
-
-```bash
-262144
-```
-
-samples.
-
-### 6. The Attack Looks At Byte Pairs
-
-AES has 16 ciphertext bytes:
-
-```text
-c[0], c[1], c[2], ..., c[15]
-```
-
-The attack compares every pair:
-
-```text
-(0,1), (0,2), ..., (14,15)
-```
-
-There are 120 pairs total.
-
-For each pair, the attack groups timings by:
-
-```text
-delta = c[i] XOR c[j]
-```
-
-If a certain `delta` tends to have a lower average time, that suggests something
-about:
-
-```text
-final_round_key[i] XOR final_round_key[j]
-```
-
-### 7. The Attack Recovers Relative Key Bytes
-
-The timing data first reveals relationships between final-round key bytes, not
-the absolute key immediately.
-
-The code represents those relationships as offsets:
-
-```c
-off[i] = final_round_key[0] XOR final_round_key[i]
-```
-
-Then the program guesses the missing first final-round byte. There are only 256
-possibilities for one byte, so this is easy.
-
-### 8. The Attack Verifies The Key
-
-For each possible final-round key candidate:
-
-1. Reverse the key schedule to get a possible original AES key.
-2. Encrypt the verifier plaintext with that key.
-3. Compare the result to the verifier ciphertext.
-
-If it matches, the key is recovered.
-
-## Walkthrough Of The Main Code
-
-### Type Aliases
-
-```c
-typedef unsigned char u8;
-typedef unsigned int u32;
-typedef unsigned long long u64;
-```
-
-These make byte-level crypto code easier to read:
-
-- `u8` means one byte.
-- `u32` means 32-bit unsigned integer.
-- `u64` means 64-bit unsigned integer.
-
-### Sample Record
-
-```c
-typedef struct {
-  u8 p[16];
-  u8 c[16];
-  u64 t;
-} sample_t;
-```
-
-Each sample stores:
-
-- `p`: plaintext block.
-- `c`: ciphertext block.
-- `t`: timing value.
-
-This is the core attack data.
-
-### Sample Header
-
-```c
-typedef struct {
-  u64 magic;
-  u32 count;
-  u32 mode;
-  u8 verifier_p[16];
-  u8 verifier_c[16];
-} sample_header_t;
-```
-
-The sample file starts with metadata:
-
-- `magic`: identifies the file format.
-- `count`: number of samples.
-- `mode`: `1` for synthetic timing mode, `2` for real measured timing mode.
-- `verifier_p`: a known plaintext.
-- `verifier_c`: its ciphertext.
-
-The verifier lets the attack prove that the recovered key is correct.
-
-### AES Tables
-
-```c
-static const u8 sbox[256] = { ... };
-static const u8 invsbox[256] = { ... };
-static const u8 rcon[10] = { ... };
-```
-
-These are standard AES constants:
-
-- `sbox`: AES substitution table.
-- `invsbox`: inverse substitution table.
-- `rcon`: round constants used during key expansion.
-
-### AES Round Functions
-
-```c
-add_round_key()
-sub_bytes()
-shift_rows()
-mix_columns()
-```
-
-These implement the standard AES round transformations:
-
-- `AddRoundKey`: XORs the state with round key bytes.
-- `SubBytes`: applies the AES S-box.
-- `ShiftRows`: rotates rows inside the AES state.
-- `MixColumns`: mixes each column mathematically.
-
-### Key Expansion
-
-```c
-static void key_expand(const u8 key[16], u8 w[176])
-```
-
-AES does not use the raw key directly in every round. It expands the 16-byte
-key into 176 bytes of round key material.
-
-For AES-128:
-
-```text
-11 round keys * 16 bytes = 176 bytes
-```
-
-### AES Encryption
-
-```c
-static void encrypt_block(const u8 in[16], u8 out[16], const u8 w[176])
-```
-
-Encrypts one 16-byte block:
-
-1. Copy plaintext into the AES state.
-2. XOR round key 0.
-3. Run rounds 1 through 9.
-4. Run the final round.
-5. Copy the state into ciphertext output.
-
-### Reverse Final Round Key
-
-```c
-static void invert_last_round_key(const u8 last[16], u8 raw[16])
-```
-
-This is crucial for the attack.
-
-The timing attack recovers the final round key first. This function walks the
-AES key schedule backward:
-
-```text
-round key 10 -> round key 9 -> ... -> original key
-```
-
-So a final-round key candidate becomes a raw AES key candidate.
-
-### Synthetic Timing Leakage
-
-```c
-static u64 synthetic_time(const u8 c[16], const u8 last[16])
-```
-
-This function models the cache-collision signal.
-
-It:
-
-1. Uses ciphertext and the real final-round key to reconstruct final-round S-box
-   input values.
-2. Counts how many pairs are equal.
-3. Returns a lower time when there are more collisions.
-4. Adds small random noise.
-
-This is the educational stand-in for real CPU cache timing.
-
-### Real Timing Leakage
-
-```c
-static u64 real_time_encrypt(const u8 p[16], u8 c[16], const u8 w[176], u32 repeats)
-```
-
-This function measures actual elapsed encryption time.
-
-It:
-
-1. Disturbs cache by reading through an eviction buffer.
-2. Starts a timer.
-3. Encrypts one AES block with the table-driven AES target.
-4. Touches ciphertext bytes so the compiler cannot ignore the result.
-5. Stops the timer.
-6. Returns raw elapsed timer ticks.
-
-On macOS, the timer is `mach_absolute_time()`. On other platforms, the fallback
-uses `clock_gettime()`.
-
-Real timing mode is experimental. It creates genuine timing samples. On this
-project, key extraction required repeated cold measurements, outlier filtering,
-and the table-driven timing target described above.
-
-### Collection Command
-
-```c
-static int cmd_collect(int argc, char **argv)
-```
-
-This command creates the attack dataset.
-
-For each sample:
-
-```text
-random plaintext -> AES encrypt -> ciphertext -> synthetic timing -> write sample
-```
-
-### Attack Command
-
-```c
-static int cmd_attack(int argc, char **argv)
-```
-
-This is the recovery engine.
-
-It:
-
-1. Reads all samples.
-2. Computes average timing for every ciphertext-byte pair and delta.
-3. Picks low-time deltas as key-byte relationship candidates.
-4. Optimizes the set of final-round key-byte offsets.
-5. Tries all 256 possibilities for the first final-round key byte.
-6. Reverses the key schedule for each candidate.
-7. Verifies against the known verifier pair.
-8. Writes the recovered key.
-
-### Verification Command
-
-```c
-static int cmd_verify(int argc, char **argv)
-```
-
-Reads a recovered key and sample file, then checks:
-
-```text
-AES_encrypt(verifier_plaintext, recovered_key) == verifier_ciphertext
-```
-
-If yes, the recovered key is correct.
-
-## Important Limitations
-
-This project has both synthetic timing and real timing.
-
-Synthetic timing is the reliable teaching path. The timing signal is modeled by
-the program instead of measured from real M4 cache behavior.
-
-Real timing is the experimental path. It measures actual elapsed encryption time.
-Recovery may still fail if:
-
-- Modern Apple Silicon uses hardware features and cache behavior unlike the old
-  Pentium-era systems in the papers.
-- Modern crypto libraries avoid the vulnerable lookup-table style.
-- Real cache timing requires careful calibration, CPU pinning, eviction logic,
-  and a deliberately vulnerable table implementation.
-
-The synthetic mode proves the attack methodology end to end. The C and Go real
-modes use table-driven timing targets and can recover the key with enough
-samples and repeated cold measurements. Python also measures real elapsed time,
-but successful extraction is much less likely because interpreter overhead is
-part of every timing sample.
-
-## Common Questions
-
-### Do I need my own plaintext and ciphertext?
-
-For this lab, no. The `collect` command generates random plaintexts and
-ciphertexts automatically.
-
-If you provide your own plaintexts, the program could encrypt them and collect
-timing samples, but you still need many samples.
-
-### Is one plaintext/ciphertext pair enough?
-
-No.
-
-One pair can verify a guessed key, but it cannot reveal the key through this
-timing attack. The attack needs many ciphertext/timing records.
-
-### Why does the attack recover the final round key first?
-
-Because the final AES round has a simpler relationship between ciphertext bytes
-and final-round key bytes. Once the final round key is known, AES-128 key
-expansion can be reversed to recover the original key.
-
-### Why are generated `.bin` files ignored?
-
-Because they may contain:
-
-- Secret keys.
-- Recovered keys.
-- Large sample traces.
-
-They are experiment outputs, not source code.
-
-## Typical Experiment
-
-```bash
-make test
 ./aes_lab keygen key.bin
 ./aes_lab collect key.bin samples.bin 262144
 ./aes_lab attack-final samples.bin recovered_key.bin
 ./aes_lab verify recovered_key.bin samples.bin
 ```
 
-Real timing experiment:
+Across the run, the values labeled `key=`, `recovered_key=`, and
+`verified_key=` should be the same 16-byte key. The attack reads `samples.bin`;
+it does not read `key.bin`.
+
+The default 262,144-sample trace is about 10 MiB. The tools are intentionally
+verbose: collection shows the verifier pair, a sample preview, and progress;
+the attack and verification commands show the recovery result.
+
+## Implementations
+
+All three implementations expose the same commands and have no third-party
+library dependencies.
+
+| Implementation | Build or run from the repository root | Requirements | Best suited for |
+| --- | --- | --- | --- |
+| C | `make`, then `./aes_lab <command>` | C11 compiler, Make, POSIX APIs | Primary experiment and real-timing work |
+| Go | `(cd go && go build -o aes_lab_go .)`, then `./go/aes_lab_go <command>` | Go 1.21+ | Independent systems-language comparison |
+| Python | `python3 python/aes_lab.py <command>` | Python 3.7+ | Reading and cross-checking the algorithm |
+
+The Go and Python ports are standalone implementations, not wrappers around the
+C binary. On the intended little-endian platforms, their key and sample files
+can be exchanged with the C implementation; see
+[File format and portability](#file-format-and-portability).
+
+## Commands
+
+Examples below use `./aes_lab`. Substitute `./go/aes_lab_go` or
+`python3 python/aes_lab.py` to run another implementation. Paths are resolved
+from the current working directory.
+
+| Command | Purpose |
+| --- | --- |
+| `selftest` | Check AES-128 against a known test vector, check the T-table target, and verify reverse key expansion. |
+| `keygen [key.bin]` | Generate a random 16-byte AES-128 key. |
+| `collect [key.bin] [samples.bin] [count]` | Write synthetic timing samples. |
+| `collect-real [key.bin] [samples.bin] [count] [-repeat N] [-evict-kb KB]` | Write measured timing samples from the table-driven target. |
+| `attack-final [samples.bin] [recovered_key.bin]` | Recover and verify a key candidate from a sample file. |
+| `verify [recovered_key.bin] [samples.bin]` | Recheck a recovered key against the verifier stored in the sample header. |
+
+Defaults:
+
+- Key file: `key.bin`
+- Sample file: `samples.bin`
+- Recovered key file: `recovered_key.bin`
+- Sample count: 262,144
+- Maximum sample count: 4,194,304
+
+A zero, invalid, or out-of-range count falls back to the default. Set
+`NO_COLOR=1` to disable ANSI color output.
+
+### Real-timing options
+
+| Option | Default | Meaning |
+| --- | --- | --- |
+| `-repeat N` | `1` | Repeat cache-disturbed single-block measurements and sum them into one sample. |
+| `-evict-kb KB` | `256` | Set the cache-disturbance buffer size in KiB. |
+
+Both options apply only to `collect-real`. The `--repeat` and `--evict-kb`
+spellings are also accepted.
+
+## Timing modes
+
+| Mode | Command | What is recorded | Reliability |
+| --- | --- | --- | --- |
+| Synthetic | `collect` | A modeled final-round cache-collision signal plus small random noise | Reliable teaching path |
+| Measured | `collect-real` | Actual elapsed time around the deliberately table-driven AES target | Experimental and machine-dependent |
+
+Synthetic timing gives statistical recovery a deliberately strong, repeatable
+signal. It models the expected relationship—more final-round table collisions
+produce a lower timing value—without claiming to measure a real processor leak.
+
+Measured timing first disturbs the cache, then times the T-table encryption
+target. Scheduler activity, cache behavior, compiler choices, the Go runtime,
+and Python interpreter overhead can all obscure the signal. A failed recovery
+usually means the signal is too weak or noisy; it does not imply that AES has
+been broken or that the program's self-test is wrong.
+
+One local C experiment is recorded in
+[`success_attempt.txt`](success_attempt.txt) with this collection recipe:
 
 ```bash
-./aes_lab collect-real key.bin real_samples.bin 200000 -repeat 50 -evict-kb 2048
+./aes_lab collect-real key.bin real_samples.bin 500000 -repeat 50 -evict-kb 2048
 ./aes_lab attack-final real_samples.bin real_recovered_key.bin
 ./aes_lab verify real_recovered_key.bin real_samples.bin
 ```
 
-Python experiment:
+Treat those values as a starting point, not a guarantee. Real-timing results
+vary by processor, operating system, language runtime, and individual run.
+
+## How the attack works
+
+```mermaid
+flowchart LR
+    K["keygen"] --> KF["key.bin<br/>raw 16-byte key"]
+    KF --> C["collect or collect-real"]
+    C --> S["samples.bin<br/>header + timing records"]
+    S --> A["attack-final"]
+    A --> R["recovered_key.bin"]
+    S --> V["verify"]
+    R --> V
+```
+
+1. `keygen` creates a random AES-128 key.
+2. `collect` or `collect-real` generates random plaintext blocks, encrypts
+   them, and stores `(plaintext, ciphertext, timing)` records. The file header
+   also contains one verifier plaintext/ciphertext pair.
+3. `attack-final` groups timings for all 120 ciphertext-byte pairs by
+   `delta = c[i] XOR c[j]`. Very slow outliers above twice the minimum timing
+   are ignored.
+4. Low average timings reveal relationships between final-round key bytes. A
+   multi-start local search refines those relative byte offsets.
+5. Only one absolute byte remains unknown. The program tries its 256 possible
+   values, reverses the AES-128 key schedule for each candidate, and tests the
+   resulting original key against the verifier pair.
+6. A verified candidate is written to `recovered_key.bin`. The separate
+   `verify` command repeats that check.
+
+The attack therefore exploits information leaked by a vulnerable
+implementation; it does not exploit a mathematical weakness in AES.
+
+## File format and portability
+
+| Artifact | Contents | Size |
+| --- | --- | --- |
+| Key file | Raw AES-128 key | 16 bytes |
+| Sample header | Magic value, count, timing mode, verifier plaintext, verifier ciphertext | 48 bytes |
+| Sample record | 16-byte plaintext, 16-byte ciphertext, 64-bit timing | 40 bytes |
+| Recovered key file | Raw verified AES-128 key | 16 bytes |
+
+A sample file is `48 + count × 40` bytes: about 10 MiB at the default count and
+160 MiB at the maximum.
+
+Go and Python explicitly serialize little-endian fields. C writes its native
+struct layout directly. The formats are interchangeable on the project's
+intended little-endian systems with the expected C struct layout, but they are
+not a portable interchange format for big-endian or unusual-ABI machines.
+
+Generated `*.bin` files are gitignored because they can contain keys and large
+timing traces. They are unencrypted, and the commands also print key material
+to the terminal. Use `make clean` for the outputs listed below; remove files
+written to other paths yourself.
+
+## Repository layout
+
+| Path | Role |
+| --- | --- |
+| [`src/aes_lab.c`](src/aes_lab.c) | C AES core, timing target, collection, attack, verification, and CLI |
+| [`go/main.go`](go/main.go) | Independent Go port of the complete lab |
+| [`python/aes_lab.py`](python/aes_lab.py) | Independent, standard-library Python port |
+| [`go/go.mod`](go/go.mod) | Go module and minimum Go version |
+| [`go/.golangci.yml`](go/.golangci.yml) | Go lint configuration |
+| [`tests/test_collect_eta.sh`](tests/test_collect_eta.sh) | Cross-implementation ETA-output regression test |
+| [`Makefile`](Makefile) | C build plus repository test and cleanup targets |
+| [`success_attempt.txt`](success_attempt.txt) | Recorded real-timing experiment commands |
+
+Each language intentionally keeps the complete pipeline in one source file.
+There is no shared library between the ports, so behavioral changes must be
+kept synchronized manually.
+
+## Development and verification
+
+| Command | What it does |
+| --- | --- |
+| `make` | Build the C executable only. |
+| `make test` | Build C, run its self-test, and check real/synthetic ETA-output behavior across C, Go, and Python. |
+| `make clean` | Remove `aes_lab`, `go/aes_lab_go`, `go/aes`, root/Go `.bin` files, Python caches, and `.DS_Store` files. |
+
+Because `make test` exercises all three implementations, it requires a C
+compiler, Go, Python 3.7+, and standard POSIX shell utilities. The cleanup
+target does not remove `python/*.bin` or `go/aeslab` produced by a bare
+`go build`; remove those manually.
+
+Run the other self-tests directly when changing shared behavior:
 
 ```bash
+(cd go && go run . selftest)
 python3 python/aes_lab.py selftest
-python3 python/aes_lab.py keygen py_key.bin
-python3 python/aes_lab.py collect py_key.bin py_samples.bin 262144
-python3 python/aes_lab.py attack-final py_samples.bin py_recovered_key.bin
-python3 python/aes_lab.py verify py_recovered_key.bin py_samples.bin
 ```
 
-If the attack fails in real mode, that does not mean AES is broken or the code is
-broken. It usually means the measured signal is too noisy or too weak for this
-simple collection strategy.
+The automated suite checks AES correctness for C, confirms that `collect-real`
+prints four human-readable ETA updates ending at `0s`, and confirms that
+synthetic `collect` prints no ETA. It does not run a full cross-language
+key-recovery matrix. Test attack changes with the synthetic workflow in every
+affected port. For serialization changes, also check that each implementation
+can read files written by the others.
 
-To try a larger sample count:
+## Limitations
 
-```bash
-./aes_lab collect key.bin samples.bin 524288
-./aes_lab attack-final samples.bin recovered_key.bin
-./aes_lab verify recovered_key.bin samples.bin
-```
-
-Larger sample counts usually make the statistics clearer, at the cost of more
-time and disk space.
-
-## Next Research Steps
-
-Possible future improvements:
-
-- Add real-timing calibration and signal-quality reports.
-- Implement the expanded final-round attack that handles normal cache-line
-  groups directly.
-- Add a compact final-table mode closer to historical OpenSSL and compare it
-  against the page-strided research target.
-- Add a Bernstein-style profile/correlation workflow.
-- Add input-file plaintext collection.
-- Add CSV export for plotting timing distributions.
-- Add tests around the attack scorer and sample file parser.
+- This is an intentionally vulnerable research target, not a production AES
+  library.
+- Synthetic timing demonstrates the methodology, not a physical cache leak.
+- Real-timing recovery is stochastic and may need substantially different
+  sample counts or fail entirely on another machine.
+- Modern crypto libraries commonly use hardware AES or constant-time software;
+  this lab does not bypass those protections.
+- The three ports share a command contract and algorithm, but their runtime and
+  low-level timing behavior cannot be identical.
