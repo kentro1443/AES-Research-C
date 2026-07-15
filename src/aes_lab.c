@@ -225,6 +225,17 @@ static u64 now_ticks(void) {
 #endif
 }
 
+static double elapsed_seconds(u64 started_at) {
+  u64 elapsed = now_ticks() - started_at;
+#ifdef __APPLE__
+  mach_timebase_info_data_t timebase;
+  mach_timebase_info(&timebase);
+  return ((double)elapsed * timebase.numer / timebase.denom) / 1000000000.0;
+#else
+  return (double)elapsed / 1000000000.0;
+#endif
+}
+
 static void disturb_cache(void) {
   static u8 *buf = NULL;
   static size_t buf_size = 0;
@@ -344,7 +355,7 @@ static void print_field_double(const char *label, double value) {
   printf("%.3f\n", value);
 }
 
-static void print_progress(const char *label, u32 done, u32 total) {
+static void print_progress(const char *label, u32 done, u32 total, double remaining_seconds) {
   const int width = 28;
   int filled = total ? (int)(((u64)done * width) / total) : 0;
   if (filled > width) filled = width;
@@ -353,6 +364,16 @@ static void print_progress(const char *label, u32 done, u32 total) {
   for (int i = 0; i < width; i++) printf("%c", i < filled ? '#' : '.');
   printf("] %u/%u", done, total);
   if (total) printf(" (%u%%)", (unsigned)(((u64)done * 100) / total));
+  if (remaining_seconds >= 0.0) {
+    u64 seconds = (u64)remaining_seconds;
+    u64 hours = seconds / 3600;
+    u64 minutes = (seconds % 3600) / 60;
+    seconds %= 60;
+    printf(" | estimated time remaining: ");
+    if (hours) printf("%lluh ", hours);
+    if (hours || minutes) printf("%llum ", minutes);
+    printf("%llus", seconds);
+  }
   printf("\n");
 }
 
@@ -500,6 +521,7 @@ static int cmd_collect(int argc, char **argv) {
   print_note("Generating plaintext/ciphertext/timing records.");
   srand((unsigned)time(NULL));
   sample_t s;
+  u64 collection_started_at = now_ticks();
   for (u32 i = 0; i < count; i++) {
     random_bytes(s.p, 16);
     if (mode == MODE_REAL) {
@@ -514,7 +536,12 @@ static int cmd_collect(int argc, char **argv) {
       print_sample_preview(&s);
     }
     if (count >= 8 && (i + 1) % (count / 4) == 0) {
-      print_progress("collection", i + 1, count);
+      double remaining_seconds = -1.0;
+      if (mode == MODE_REAL) {
+        u32 done = i + 1;
+        remaining_seconds = elapsed_seconds(collection_started_at) * (count - done) / done;
+      }
+      print_progress("collection", i + 1, count, remaining_seconds);
       fflush(stdout);
     }
   }
@@ -660,7 +687,7 @@ static int cmd_attack(int argc, char **argv) {
         num[p][d]++;
       }
     if (h.count >= 8 && (n + 1) % (h.count / 4) == 0) {
-      print_progress("analysis read", n + 1, h.count);
+      print_progress("analysis read", n + 1, h.count, -1.0);
       fflush(stdout);
     }
   }

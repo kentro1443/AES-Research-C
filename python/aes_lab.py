@@ -299,7 +299,18 @@ def print_field_double(label, value):
     print(f"{value:.3f}")
 
 
-def print_progress(label, done, total):
+def format_duration(duration_seconds):
+    seconds = int(duration_seconds)
+    hours, seconds = divmod(seconds, 3600)
+    minutes, seconds = divmod(seconds, 60)
+    if hours:
+        return f"{hours}h {minutes}m {seconds}s"
+    if minutes:
+        return f"{minutes}m {seconds}s"
+    return f"{seconds}s"
+
+
+def print_progress(label, done, total, remaining_seconds=None):
     width = 28
     filled = int((done * width) // total) if total else 0
     if filled > width:
@@ -309,6 +320,8 @@ def print_progress(label, done, total):
     print(f"[{bar}] {done}/{total}", end="")
     if total:
         print(f" ({(done * 100) // total}%)", end="")
+    if remaining_seconds is not None:
+        print(f" | estimated time remaining: {format_duration(remaining_seconds)}", end="")
     print()
 
 
@@ -472,6 +485,7 @@ def cmd_collect(args):
             print_hex("verifier_plaintext=", verifier_p)
             print_hex("verifier_ciphertext=", verifier_c)
             print_note("Generating plaintext/ciphertext/timing records.")
+            collection_started_at = time.monotonic()
             for n in range(count):
                 p = random_bytes(16)
                 if mode == MODE_REAL:
@@ -484,7 +498,11 @@ def cmd_collect(args):
                     print_note("First generated sample preview:")
                     print_sample_preview(p, c, t)
                 if count >= 8 and (n + 1) % (count // 4) == 0:
-                    print_progress("collection", n + 1, count)
+                    done = n + 1
+                    remaining_seconds = None
+                    if mode == MODE_REAL:
+                        remaining_seconds = (time.monotonic() - collection_started_at) * (count - done) / done
+                    print_progress("collection", done, count, remaining_seconds)
     except OSError as exc:
         print(f"{out}: {exc}", file=sys.stderr)
         return 1

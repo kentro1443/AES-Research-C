@@ -508,6 +508,7 @@ During collection, the program prints:
 - The verifier plaintext/ciphertext pair.
 - A preview of the first generated sample.
 - A progress bar at 25%, 50%, 75%, and 100%.
+- For `collect-real`, an estimated time remaining on each progress line.
 
 ### `attack-final`
 

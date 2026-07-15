@@ -9,6 +9,7 @@ aes_lab: src/aes_lab.c
 
 test: aes_lab
 	./aes_lab selftest
+	./tests/test_collect_eta.sh
 
 clean: clean-c clean-go clean-python clean-misc
 
