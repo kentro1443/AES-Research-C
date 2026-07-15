@@ -1,8 +1,10 @@
 # AES Research C
 
-This repository is a small C research lab for studying AES cache-timing key
-recovery. It is based on the methodology from classic AES timing-attack papers,
-especially final-round cache-collision attacks.
+This repository is a small research lab for studying AES cache-timing key
+recovery. It started as a C implementation and now includes equivalent C, Go,
+and Python versions of the same experiment. It is based on the methodology from
+classic AES timing-attack papers, especially final-round cache-collision
+attacks.
 
 The goal is educational: show the whole pipeline from key generation, to
 encryption samples, to timing analysis, to recovering the AES key.
@@ -115,6 +117,14 @@ A Go port of the same lab, mirroring `src/aes_lab.c` function-for-function
 (same AES core, same T-table timing target, same final-round attack, same
 CLI commands). See [Go Port](#go-port) below for details.
 
+### `python/aes_lab.py`
+
+A standard-library Python port of the same lab. It is designed for readability
+and cross-checking: same AES core, same T-table timing target, same final-round
+attack, same byte-compatible `.bin` files, and the same CLI commands. It also
+has a genuine `collect-real` path that records measured Python execution time.
+See [Python Port](#python-port) below for details.
+
 ### `.gitignore`
 
 Keeps generated files out of git:
@@ -206,6 +216,18 @@ The measured real path that has successfully recovered a key on this project is:
 ./aes_lab verify real_recovered_key.bin real_samples.bin
 ```
 
+The Go and Python versions use the same command names:
+
+```bash
+cd go
+go run . selftest
+go run . collect key.bin samples.bin 262144
+
+cd ..
+python3 python/aes_lab.py selftest
+python3 python/aes_lab.py collect key.bin samples.bin 262144
+```
+
 ## Go Port
 
 `go/main.go` is a from-scratch Go port of the exact same lab: same AES-128
@@ -257,6 +279,21 @@ cd go && ./aes_lab_go collect key.bin samples.bin 262144
 ```
 
 Both directions have been verified to work.
+
+Python is byte-compatible too, so sample/key files can be moved among all three
+implementations:
+
+```bash
+# Python writes, C attacks and verifies
+python3 python/aes_lab.py collect key.bin py_samples.bin 262144
+./aes_lab attack-final py_samples.bin recovered.bin
+./aes_lab verify recovered.bin py_samples.bin
+
+# C writes, Python attacks and verifies
+./aes_lab collect key.bin c_samples.bin 262144
+python3 python/aes_lab.py attack-final c_samples.bin recovered.bin
+python3 python/aes_lab.py verify recovered.bin c_samples.bin
+```
 
 ### How the timing-sensitive parts were ported
 
@@ -314,11 +351,69 @@ count first, then adjust `-repeat`/`-evict-kb`.
 - **GC pauses** can occasionally inject latency outliers into real-timing
   measurements that have no C analogue.
 
+## Python Port
+
+`python/aes_lab.py` is a direct Python implementation of the same lab. It is not
+a wrapper around the C or Go binaries.
+
+### Run
+
+Requires Python 3.10+ and no third-party packages.
+
+```bash
+python3 python/aes_lab.py selftest
+python3 python/aes_lab.py keygen key.bin
+python3 python/aes_lab.py collect key.bin samples.bin 262144
+python3 python/aes_lab.py attack-final samples.bin recovered_key.bin
+python3 python/aes_lab.py verify recovered_key.bin samples.bin
+```
+
+### Commands are identical
+
+The Python script accepts the same commands as the C and Go implementations:
+
+```bash
+python3 python/aes_lab.py selftest
+python3 python/aes_lab.py keygen [key.bin]
+python3 python/aes_lab.py collect [key.bin] [samples.bin] [count]
+python3 python/aes_lab.py collect-real [key.bin] [samples.bin] [count] [-repeat N] [-evict-kb KB]
+python3 python/aes_lab.py attack-final [samples.bin] [recovered_key.bin]
+python3 python/aes_lab.py verify [recovered_key.bin] [samples.bin]
+```
+
+### What Python is best for
+
+Python is the easiest version to read while learning the attack:
+
+- AES state transformations are plain list/bytearray operations.
+- The binary format is visible through `struct.Struct("<QII16s16s")` and
+  `struct.Struct("<16s16sQ")`.
+- The attack loop mirrors the C/Go logic without pointer syntax.
+- Cross-language compatibility tests are easy because the `.bin` files are
+  identical.
+
+### Python real timing
+
+Python `collect-real` records genuine measured elapsed time using
+`time.perf_counter_ns()` around the table-driven AES target:
+
+```bash
+python3 python/aes_lab.py collect-real key.bin py_real_samples.bin 500000 -repeat 50 -evict-kb 2048
+python3 python/aes_lab.py attack-final py_real_samples.bin py_real_recovered.bin
+python3 python/aes_lab.py verify py_real_recovered.bin py_real_samples.bin
+```
+
+This is pure measurement, not synthetic leakage. However, Python adds a large
+amount of interpreter/runtime overhead around every table lookup. That overhead
+can drown out the small cache signal that the C and Go versions are trying to
+measure. For reliable real-timing demonstrations, use the C implementation
+first, then use Python to inspect and cross-check the methodology.
+
 ## Command Reference
 
 Commands below are shown as `./aes_lab`, but apply identically to
-`./aes_lab_go` (see [Go Port](#go-port)) — same arguments, same defaults,
-same exit codes.
+`./aes_lab_go` (see [Go Port](#go-port)) and `python3 python/aes_lab.py` (see
+[Python Port](#python-port)) — same arguments, same defaults, same exit codes.
 
 ### `selftest`
 
@@ -839,9 +934,11 @@ Recovery may still fail if:
 - Real cache timing requires careful calibration, CPU pinning, eviction logic,
   and a deliberately vulnerable table implementation.
 
-The synthetic mode proves the attack methodology end to end. The natural real
-mode now uses a table-driven timing target and can recover the key with enough
-samples and repeated cold measurements.
+The synthetic mode proves the attack methodology end to end. The C and Go real
+modes use table-driven timing targets and can recover the key with enough
+samples and repeated cold measurements. Python also measures real elapsed time,
+but successful extraction is much less likely because interpreter overhead is
+part of every timing sample.
 
 ## Common Questions
 
@@ -892,6 +989,16 @@ Real timing experiment:
 ./aes_lab collect-real key.bin real_samples.bin 200000 -repeat 50 -evict-kb 2048
 ./aes_lab attack-final real_samples.bin real_recovered_key.bin
 ./aes_lab verify real_recovered_key.bin real_samples.bin
+```
+
+Python experiment:
+
+```bash
+python3 python/aes_lab.py selftest
+python3 python/aes_lab.py keygen py_key.bin
+python3 python/aes_lab.py collect py_key.bin py_samples.bin 262144
+python3 python/aes_lab.py attack-final py_samples.bin py_recovered_key.bin
+python3 python/aes_lab.py verify py_recovered_key.bin py_samples.bin
 ```
 
 If the attack fails in real mode, that does not mean AES is broken or the code is

@@ -1,5 +1,12 @@
 aes_lab
 aes_lab_go
+go/aes_lab_go
+go/aes
 *.bin
 *.o
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
 .DS_Store
+CLAUDE.local.md

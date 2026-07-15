@@ -199,9 +199,10 @@ func initTables() {
 	tablesReady = true
 }
 
-// go:noinline forces a real call boundary around every table read, standing
-// in for C's volatile pointers which block the compiler from eliding or
-// reordering the lookups that make the timing side channel observable.
+// The noinline pragma below forces a real call boundary around every table
+// read, standing in for C's volatile pointers which block the compiler from
+// eliding or reordering the lookups that make the timing side channel
+// observable.
 //
 //go:noinline
 func ttableColumn(out []u8, a, b, c, d u8, rk []u8) {
@@ -288,7 +289,7 @@ func readFileExact(path string, buf []u8) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	_, err = io.ReadFull(f, buf)
 	return err
 }
@@ -573,7 +574,7 @@ func cmdCollect(args []string) int {
 		fmt.Fprintf(os.Stderr, "%s: %v\n", out, err)
 		return 1
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	bw := bufio.NewWriter(f)
 
 	var h sampleHeaderT
@@ -604,7 +605,10 @@ func cmdCollect(args []string) int {
 		copy(rec[0:16], s.P[:])
 		copy(rec[16:32], s.C[:])
 		binary.LittleEndian.PutUint64(rec[32:40], s.T)
-		bw.Write(rec[:])
+		if _, err := bw.Write(rec[:]); err != nil {
+			fmt.Fprintf(os.Stderr, "%s: %v\n", out, err)
+			return 1
+		}
 		if i == 0 {
 			printNote("First generated sample preview:")
 			printSamplePreview(&s)
@@ -613,7 +617,14 @@ func cmdCollect(args []string) int {
 			printProgress("collection", i+1, count)
 		}
 	}
-	bw.Flush()
+	if err := bw.Flush(); err != nil {
+		fmt.Fprintf(os.Stderr, "%s: %v\n", out, err)
+		return 1
+	}
+	if err := f.Close(); err != nil {
+		fmt.Fprintf(os.Stderr, "%s: %v\n", out, err)
+		return 1
+	}
 	printNote("Finished writing sample file.")
 	printHex("key=", key[:])
 	printFieldU32("samples", count)
@@ -723,7 +734,7 @@ func cmdAttack(args []string) int {
 		fmt.Fprintf(os.Stderr, "%s: %v\n", samplesPath, err)
 		return 1
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	var h sampleHeaderT
 	if err := binary.Read(f, binary.LittleEndian, &h); err != nil || h.Magic != magic || h.Count == 0 {
@@ -929,11 +940,11 @@ func cmdVerify(args []string) int {
 	}
 	var h sampleHeaderT
 	if err := binary.Read(f, binary.LittleEndian, &h); err != nil || h.Magic != magic {
-		f.Close()
+		_ = f.Close()
 		fmt.Fprintln(os.Stderr, "bad sample file")
 		return 1
 	}
-	f.Close()
+	_ = f.Close()
 	printHex("verifier_plaintext=", h.VerifierP[:])
 	printHex("expected_ciphertext=", h.VerifierC[:])
 	keyExpand(key[:], w)
