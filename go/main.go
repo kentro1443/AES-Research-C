@@ -363,7 +363,21 @@ func printFieldDouble(label string, value float64) {
 	fmt.Printf("%.3f\n", value)
 }
 
-func printProgress(label string, done, total u32) {
+func formatDuration(duration time.Duration) string {
+	seconds := u64(duration / time.Second)
+	hours := seconds / 3600
+	minutes := (seconds % 3600) / 60
+	seconds %= 60
+	if hours > 0 {
+		return fmt.Sprintf("%dh %dm %ds", hours, minutes, seconds)
+	}
+	if minutes > 0 {
+		return fmt.Sprintf("%dm %ds", minutes, seconds)
+	}
+	return fmt.Sprintf("%ds", seconds)
+}
+
+func printProgress(label string, done, total u32, remaining time.Duration) {
 	const width = 28
 	filled := 0
 	if total != 0 {
@@ -384,6 +398,9 @@ func printProgress(label string, done, total u32) {
 	fmt.Printf("] %d/%d", done, total)
 	if total != 0 {
 		fmt.Printf(" (%d%%)", (u64(done)*100)/u64(total))
+	}
+	if remaining >= 0 {
+		fmt.Printf(" | estimated time remaining: %s", formatDuration(remaining))
 	}
 	fmt.Println()
 }
@@ -594,6 +611,7 @@ func cmdCollect(args []string) int {
 	printNote("Generating plaintext/ciphertext/timing records.")
 	var s sampleT
 	var rec [40]u8
+	collectionStartedAt := time.Now()
 	for i := u32(0); i < count; i++ {
 		randomBytes(s.P[:])
 		if mode == modeReal {
@@ -614,7 +632,12 @@ func cmdCollect(args []string) int {
 			printSamplePreview(&s)
 		}
 		if count >= 8 && (i+1)%(count/4) == 0 {
-			printProgress("collection", i+1, count)
+			done := i + 1
+			remaining := time.Duration(-1)
+			if mode == modeReal {
+				remaining = time.Duration(float64(time.Since(collectionStartedAt)) * float64(count-done) / float64(done))
+			}
+			printProgress("collection", done, count, remaining)
 		}
 	}
 	if err := bw.Flush(); err != nil {
@@ -818,7 +841,7 @@ func cmdAttack(args []string) int {
 			}
 		}
 		if h.Count >= 8 && (n+1)%(h.Count/4) == 0 {
-			printProgress("analysis read", n+1, h.Count)
+			printProgress("analysis read", n+1, h.Count, -1)
 		}
 	}
 	printFieldU32("used samples", usedSamples)
