@@ -80,13 +80,43 @@ def _save(fig, outdir, stem):
     print(f"  wrote {os.path.join(outdir, stem)}.png (+ .svg)")
 
 
-def plot_success(r30, fit, cross, tag, outdir):
+def bracket_50(rows):
+    """The consecutive sampled counts straddling the 50% crossing.
+
+    Everything between them is unsampled, so the threshold there rests on the
+    fit's shape rather than on data. Trial count cannot narrow this gap -- only
+    adding counts can -- which is why it is drawn separately from the CIs.
+    """
+    ordered = sorted(rows, key=lambda r: r["count"])
+    for lo, hi in zip(ordered, ordered[1:]):
+        if lo["success_rate"] <= 0.5 <= hi["success_rate"]:
+            return lo["count"], hi["count"]
+    return None
+
+
+def derive_tag(path):
+    """count_threshold_<tag>_summary.csv -> <tag> (mirrors plot_threshold.py)."""
+    stem = os.path.basename(path)
+    stem = stem[:-4] if stem.endswith(".csv") else stem
+    if stem.endswith("_summary"):
+        stem = stem[:-len("_summary")]
+    return stem.replace("count_threshold", "").strip("_") or "projection"
+
+
+def plot_success(r30, fit, cross, tag, label, outdir):
     c = np.array([r["count"] for r in r30], dtype=float)
     p = np.array([r["success_rate"] for r in r30])
     lo = np.array([r["ci_lo"] for r in r30])
     hi = np.array([r["ci_hi"] for r in r30])
 
     fig, ax = plt.subplots(figsize=(9, 5.9))
+
+    br = bracket_50(r30)
+    if br is not None:
+        span = math.log2(br[1]) - math.log2(br[0])
+        ax.axvspan(br[0], br[1], color="#f0b429", alpha=0.16, zorder=0,
+                   label=f"unsampled gap around 50% ({span:.2f} log2 wide)")
+
     ax.errorbar(c, p, yerr=[p - lo, hi - p], fmt="o", ms=6, color=C_N30,
                 ecolor=C_N10, capsize=3, zorder=3,
                 label="success rate (projected 95% Wilson CI, n=30)")
@@ -108,15 +138,18 @@ def plot_success(r30, fit, cross, tag, outdir):
     ax.set_ylabel("key-recovery success rate")
     ax.set_ylim(-0.03, 1.03)
     ax.set_title("AES cache-timing attack: success rate vs sample count\n"
-                 "(C port, n=30 PROJECTED from n=10)")
+                 f"({label}, n=30 PROJECTED from n=10)")
     ax.grid(True, which="both", ls=":", alpha=0.4)
-    ax.legend(loc="lower right", fontsize=9)
+    # 'best' rather than a fixed corner: the C curve saturates on the right so
+    # lower-right is clear, but the Go curves are still rising there and would
+    # sit under a pinned legend.
+    ax.legend(loc="best", fontsize=9, framealpha=0.92)
     fig.tight_layout()
     _caption(fig, -0.02)
     _save(fig, outdir, f"{tag}_success_rate")
 
 
-def plot_ci_compare(r10, r30, tag, outdir):
+def plot_ci_compare(r10, r30, tag, label, outdir):
     """The money chart: how much the interval tightens, count by count."""
     by10 = {r["count"]: r for r in r10}
     counts = [r["count"] for r in r30]
@@ -158,16 +191,16 @@ def plot_ci_compare(r10, r30, tag, outdir):
     ax2.grid(True, axis="x", ls=":", alpha=0.4)
     ax2.legend(loc="lower right", fontsize=9)
 
-    fig.suptitle("Tripling trials buys precision, not a different threshold",
-                 fontsize=13)
+    fig.suptitle(f"{label}: tripling trials buys precision, "
+                 "not a different threshold", fontsize=13)
     fig.tight_layout(rect=(0, 0, 1, 0.97))
     _caption(fig, -0.03)
     _save(fig, outdir, f"{tag}_ci_compare")
 
 
 def main(argv):
-    if len(argv) != 3:
-        sys.exit(f"usage: {argv[0]} <n10_summary.csv> <n30_projected_summary.csv>")
+    if len(argv) not in (3, 4):
+        sys.exit(f"usage: {argv[0]} <n10_summary.csv> <n30_projected_summary.csv> [label]")
     r10, r30 = load_summary(argv[1]), load_summary(argv[2])
     if [r["count"] for r in r10] != [r["count"] for r in r30]:
         sys.exit("error: the two summaries cover different sample counts")
@@ -177,11 +210,17 @@ def main(argv):
 
     outdir = os.path.join(os.path.dirname(os.path.abspath(argv[2])), "plots")
     os.makedirs(outdir, exist_ok=True)
-    tag = "C_30x_projected"
+    tag = derive_tag(argv[2])
+    label = argv[3] if len(argv) == 4 else tag
+
+    if len(r30) < 6:
+        print(f"  NOTE: only {len(r30)} sample counts in this sweep. More trials "
+              "cannot compensate for a coarse\n        count grid -- the threshold "
+              "estimate stays grid-limited. See note.md.")
 
     fit30, cross30 = fit_logistic(r30), interp_crossover(r30)
-    plot_success(r30, fit30, cross30, tag, outdir)
-    plot_ci_compare(r10, r30, tag, outdir)
+    plot_success(r30, fit30, cross30, tag, label, outdir)
+    plot_ci_compare(r10, r30, tag, label, outdir)
 
     fit10, cross10 = fit_logistic(r10), interp_crossover(r10)
     print("\n  threshold estimates (should be ~unchanged -- that is the point):")

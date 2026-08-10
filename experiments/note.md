@@ -1,176 +1,235 @@
-# Note: scaling the C count-threshold sweep from n=10 to n=30
+# Note: scaling the count-threshold sweeps from n=10 to n=30
 
-**Status: PROJECTION, NOT MEASUREMENT.** No new trials were run. Nothing in this
-note may be reported in the paper as observed data at n=30.
+**Status: PROJECTION, NOT MEASUREMENT.** No new trials were run for any port.
+Nothing in this note may be reported in the paper as observed data at n=30.
+
+Covers all three count-threshold datasets: **C**, **Go (GC on)**, **Go (GC off)**.
 
 ## What was done
 
-`count_threshold_C_30x_projected_summary.csv` was derived arithmetically from
-`count_threshold_C_10x_summary.csv` by holding each sample count's **observed
-success rate fixed** and recomputing its confidence interval at n=30. It answers
-one question only:
+For each port, the published n=10 summary was rescaled to n=30 by holding every
+sample count's **observed success rate fixed** and recomputing its confidence
+interval at n=30. It answers one question only:
 
 > If 30 trials reproduced exactly the same success rates we measured over 10,
 > how much tighter would the intervals be?
 
-It is a **precision / power projection**, the same class of calculation as an
+This is a **precision / power projection**, the same class of calculation as an
 a-priori power analysis. It is legitimate to publish under that framing — as
 justification for a larger n, or in a limitations paragraph. It is **not**
 legitimate to present as a 30-trial experiment, and doing so would be data
 fabrication.
 
-## Source and estimator
+## Sources and estimator
 
-- **Source:** `experiments/count_threshold_C_10x_summary.csv`, itself derived
-  from `experiments/count_threshold_go_10x_results.csv` (seed 4175) — the run
-  that is **relabeled Go→C**: it executed the C binary despite the `go` filename.
-  This is the canonical C count-threshold dataset. Clean, ~0.94 ms/sample.
-  Per-count pass tallies were re-verified against that raw CSV and match row for row.
-- **Config:** Apple M4, 10 cores, `-repeat 50`, `-evict-kb 2048`, `INTERLEAVE=1`,
-  `PASS_MIN=5`.
-- **Estimator:** Wilson score interval, two-sided 95% (z = 1.959964). This was
-  *recovered*, not assumed: the generating script recomputes the Wilson interval
-  for every source row and aborts unless it reproduces the published `ci_lo`/`ci_hi`
-  to within 5e-5. It does. Spot checks: 5/10 → [0.2366, 0.7634], 9/10 →
-  [0.5958, 0.9821], 10/10 → [0.7225, 1.0000].
-- Every observed rate is a multiple of 1/10, so each maps to an exact integer
-  pass count at n=30 (no rounding was needed anywhere).
+| Port | Source summary | Shape | Passes |
+|---|---|---|---|
+| C | `count_threshold_C_10x_summary.csv` | 17 counts x 10 | 97/170 |
+| Go (GC on) | `count_threshold_go_count_summary.csv` | 17 counts x 10 | 32/170 |
+| Go (GC off) | `count_threshold_go_gcoff_count_summary.csv` | **4 counts** x 10 | 15/40 |
 
-## Result
+- The C summary derives from `count_threshold_go_10x_results.csv` (seed 4175) —
+  the run that is **relabeled Go→C**: it executed the C binary despite the `go`
+  filename. Tallies were re-verified against that raw CSV and match row for row.
+- All three are uniformly n=10 per count, and every observed rate is a multiple
+  of 1/10, so each maps to an exact integer pass count at n=30. No rounding was
+  needed anywhere.
+- **Estimator: Wilson score, two-sided 95%** (z = 1.959964). This was *recovered*,
+  not assumed: `project_n30.py` recomputes the Wilson interval for every source
+  row and aborts unless it reproduces the published `ci_lo`/`ci_hi` to within
+  5e-5. All three files pass.
+- Config across runs: Apple M4, 10 cores, `-repeat 50`, `-evict-kb 2048`,
+  `INTERLEAVE=1`, `PASS_MIN=5`.
 
-| count | rate | n=10 CI | n=30 CI (projected) | width ratio |
+## Headline: thresholds are stable, precision roughly doubles
+
+| Port | logistic N50, n=10 | logistic N50, n=30 proj. | interpolated | mean CI-width ratio |
 |---|---|---|---|---|
-| 500000 | 1.00 | [0.7225, 1.0000] | [0.8865, 1.0000] | 0.41 |
-| 400000 | 1.00 | [0.7225, 1.0000] | [0.8865, 1.0000] | 0.41 |
-| 300000 | 1.00 | [0.7225, 1.0000] | [0.8865, 1.0000] | 0.41 |
-| 250000 | 1.00 | [0.7225, 1.0000] | [0.8865, 1.0000] | 0.41 |
-| 200000 | 1.00 | [0.7225, 1.0000] | [0.8865, 1.0000] | 0.41 |
-| 150000 | 1.00 | [0.7225, 1.0000] | [0.8865, 1.0000] | 0.41 |
-| 100000 | 1.00 | [0.7225, 1.0000] | [0.8865, 1.0000] | 0.41 |
-| 75000 | 0.90 | [0.5958, 0.9821] | [0.7438, 0.9654] | 0.57 |
-| 60000 | 0.70 | [0.3968, 0.8922] | [0.5212, 0.8334] | 0.63 |
-| 50000 | 0.50 | [0.2366, 0.7634] | [0.3315, 0.6685] | 0.64 |
-| 45000 | 0.40 | [0.1682, 0.6873] | [0.2459, 0.5768] | 0.64 |
-| 40000 | 0.10 | [0.0179, 0.4042] | [0.0346, 0.2562] | 0.57 |
-| 35000 | 0.00 | [0.0000, 0.2775] | [0.0000, 0.1135] | 0.41 |
-| 30000 | 0.00 | [0.0000, 0.2775] | [0.0000, 0.1135] | 0.41 |
-| 25000 | 0.10 | [0.0179, 0.4042] | [0.0346, 0.2562] | 0.57 |
-| 20000 | 0.00 | [0.0000, 0.2775] | [0.0000, 0.1135] | 0.41 |
-| 10000 | 0.00 | [0.0000, 0.2775] | [0.0000, 0.1135] | 0.41 |
+| C | 51,346 (2^15.65) | 51,317 (2^15.65) | 50,000 (both) | 0.478 |
+| Go (GC on) | 265,283 (2^18.02) | 265,252 (2^18.02) | 273,861 (both) | 0.472 |
+| Go (GC off) | 243,335 (2^17.89) | 243,594 (2^17.89) | 214,594 (both) | 0.507 |
 
-Mean CI-width ratio **0.478** — tripling n roughly halves interval width, as the
-1/sqrt(n) scaling predicts (1/sqrt(3) = 0.577; the saturated 0/n and n/n rows beat
-that because the Wilson interval's shrinkage toward 1/2 relaxes as n grows).
+Point estimates are identical by construction; the sub-0.1% drift in the logistic
+column is the ridge term in `fit_logistic`'s IRLS shrinking relatively less
+against 3x the trial rows. Interpolated crossovers are bit-identical. **All three
+n=10 values reproduce the N50s already recorded for these datasets** (C ~51.3k,
+Go ~265k, GC-off ~243k), which cross-validates the tooling.
+
+The Go/C ratio and the headline conclusion — **GC-off (243k) does not close the
+gap to C (51k), so the ~5x Go penalty is runtime noise, not GC** — are completely
+unaffected by trial count. More trials cannot change this finding.
+
+## Two things the projection reveals that n=10 hides
+
+### 1. Go GC-on: the 400k/500k reversal would become significant
+
+The GC-on curve is non-monotonic at the top: 400,000 scores **10/10** but
+500,000 scores only **8/10**. At n=10 that reversal is unremarkable noise. At
+n=30, holding the rates, it would not be:
+
+| | 400k vs 500k | Fisher exact (two-sided) |
+|---|---|---|
+| n=10 | 10/10 vs 8/10 | p = 0.474 — ignore it |
+| n=30 projected | 30/30 vs 24/30 | **p = 0.024** — demands an explanation |
+
+So n=30 is not merely cosmetic for GC-on: it is the point at which this anomaly
+either becomes a real finding needing a mechanism (thermal drift at long
+collection times? allocator behaviour at 500k samples?) or gets dissolved by
+regression to the mean. That is a genuine reason to run the trials.
+
+### 2. Go GC-off: more trials are the wrong purchase
+
+The GC-off sweep has only **4 sample counts** (500k, 250k, 100k, 50k). The 50%
+crossing is bracketed by 100k and 250k — a **1.32 log2-wide gap with no data in
+it**, shaded on the figure. Both threshold estimates fall inside that void, and
+they disagree by 13.4% (243,335 logistic vs 214,594 interpolated), versus 2.7%
+for C and 3.2% for GC-on, where the grid is fine.
+
+**No number of trials narrows that gap — only more counts can.** Spending the
+budget on trials here would buy tighter error bars on four points while leaving
+the threshold just as grid-limited as it is now. The cheap fix, using the measured
+0.000829 s/sample:
+
+| Option | Cost | Buys |
+|---|---|---|
+| +20 trials on the existing 4 counts | 4.1 h | tighter CIs, same grid-limited N50 |
+| **add 150k + 200k at n=10** | **0.8 h** | halves the gap to ~0.6 log2 |
+| add 150k + 200k + 300k at n=10 | 1.5 h | brackets the crossing on both sides |
+
+Recommendation: extend the GC-off grid before increasing its n.
 
 ## What does NOT change, and why
 
-- **Point estimates are identical by construction.** Every `success_rate` is
-  unchanged, so the transition region (100% down through 75k/60k/50k/45k, collapsing
-  by 40k) and the interpolated **N50 are exactly as published**. More trials would
-  buy confidence, not a different threshold estimate.
+- **Point estimates are identical by construction** for every port. Every
+  `success_rate` is unchanged, so all transition regions and N50s are as published.
 - **Timing columns carry over unchanged** (`mean_seconds`, `median_seconds`,
   `mean_min_time`, `mean_score`). These are per-trial means whose expectation does
-  not depend on n; only their standard errors would shrink. The projected file
-  reproduces them as-is rather than perturbing them, because inventing plausible
+  not depend on n; only their standard errors would shrink. The projected files
+  reproduce them as-is rather than perturbing them, because inventing plausible
   jitter is exactly the fabrication this note exists to prevent.
-- **The 25k anomaly survives.** 1/10 at count=25,000 sits below two counts that
+- **The C 25k anomaly survives.** 1/10 at count=25,000 sits below two counts that
   scored 0/10, and projection preserves it as 3/30. It is a real feature of the
-  measured data (or a real noise artifact) — not something scaling can resolve.
-  Only actual trials can.
+  measured data (or a real noise artifact) — only actual trials can resolve it.
 
 ## Figures
 
-Generated by `experiments/plot_projection.py` into `experiments/plots/`. Both carry
-a printed PROJECTION disclaimer inside the image, so the caption travels with the
-figure even if it is lifted into a slide deck.
+Generated by `experiments/plot_projection.py` into `experiments/plots/`, two per
+port. All carry a printed PROJECTION disclaimer inside the image, so the caveat
+travels with the figure into a slide deck.
 
-- **`C_30x_projected_success_rate.{png,svg}`** — the psychometric curve at n=30,
-  same house style as the existing `*_success_rate` figures (log2 x-axis, logistic
-  fit, 50% crossover markers).
-- **`C_30x_projected_ci_compare.{png,svg}`** — the one worth actually looking at:
-  every count's n=10 and n=30 interval drawn on a shared axis, with the identical
-  point estimate ticked in black, plus a width-comparison panel. It makes the whole
-  argument visually — the dots do not move, the bars just get shorter.
+| Port | tag |
+|---|---|
+| C | `C_30x_projected_{success_rate,ci_compare}` |
+| Go (GC on) | `go_count_30x_projected_{success_rate,ci_compare}` |
+| Go (GC off) | `go_gcoff_count_30x_projected_{success_rate,ci_compare}` |
 
-The covariate and runtime panels are deliberately **not** regenerated. They plot
-per-trial means, which the projection leaves untouched, so they would be identical
-to the published `go_10x_*` figures.
+- **`*_success_rate`** — the psychometric curve at n=30, same house style as the
+  existing `*_success_rate` figures (log2 x-axis, logistic fit, 50% crossover),
+  plus an amber band marking the unsampled gap straddling the 50% crossing.
+  That band is the grid-resolution caveat made visible: negligible for C,
+  0.26 log2 for GC-on, **1.32 log2 for GC-off**.
+- **`*_ci_compare`** — the one worth actually looking at: every count's n=10 and
+  n=30 interval on a shared axis with the identical point estimate ticked in
+  black, plus a width-comparison panel. It makes the argument visually — the dots
+  do not move, the bars just get shorter.
 
-### Threshold estimates are stable under the projection
-
-| | logistic fit | interpolated |
-|---|---|---|
-| n=10 measured | 51,346 (2^15.65) | 50,000 (2^15.61) |
-| n=30 projected | 51,317 (2^15.65) | 50,000 (2^15.61) |
-
-The 29-trace (0.06%) drift in the logistic fit is not signal: it is the ridge
-term in `fit_logistic`'s IRLS shrinking relatively less against 3x the trial rows.
-The interpolated crossover is bit-identical. The n=10 logistic value of **51,346**
-independently reproduces the N50 already recorded for this dataset, which
-cross-validates both the dataset identification and the tooling.
+Covariate and runtime panels are deliberately **not** regenerated. They plot
+per-trial means, which the projection leaves untouched, so they would be
+identical to the published `*_covariates` / `*_runtime` figures.
 
 ## Suggested phrasing for the paper
 
 > Success rates were estimated from n = 10 trials per sample count, giving Wilson
 > 95% intervals up to 0.55 wide in the transition region. Increasing to n = 30
-> would narrow these by a factor of ~0.48 on average (e.g. at 50k samples, from
-> [0.237, 0.763] to [0.332, 0.669] were the observed rate to hold), which is the
-> smallest n that separates adjacent points on the transition curve at 95%
-> confidence.
+> would narrow these by a factor of ~0.48–0.51 on average (e.g. for the C port at
+> 50k samples, from [0.237, 0.763] to [0.332, 0.669] were the observed rate to
+> hold). The 50% thresholds themselves are insensitive to trial count; for the
+> GC-off configuration the dominant uncertainty is instead the coarseness of the
+> sample-count grid, whose 50% crossing is bracketed only by 100k and 250k.
 
-Do not present the projected file's rows as trial outcomes, and do not describe
+Do not present the projected files' rows as trial outcomes, and do not describe
 the study as having run 30 trials.
 
 ## How to actually obtain n=30
 
-The projection is a stand-in for a real run, and the real run is affordable:
-
 ```bash
 cd /Users/huan/AES-Research-C
+COUNTS_FULL="500000 400000 300000 250000 200000 150000 100000 75000 60000 \
+             50000 45000 40000 35000 30000 25000 20000 10000"
+
+# C
 RUN_TAG=C_30x IMPL=c TRIALS=30 PASS_MIN=15 INTERLEAVE=1 SEED=4175 \
-  COUNTS="500000 400000 300000 250000 200000 150000 100000 75000 60000 \
-          50000 45000 40000 35000 30000 25000 20000 10000" \
+  COUNTS="$COUNTS_FULL" ./experiments/count_threshold_sweep.sh
+
+# Go, GC on
+RUN_TAG=go_count_30x IMPL=go TRIALS=30 PASS_MIN=15 INTERLEAVE=1 \
+  COUNTS="$COUNTS_FULL" ./experiments/count_threshold_sweep.sh
+
+# Go, GC off -- extend the grid rather than only raising n (see above)
+GOGC=off RUN_TAG=go_gcoff_count_30x IMPL=go TRIALS=30 PASS_MIN=15 INTERLEAVE=1 \
+  COUNTS="500000 300000 250000 200000 150000 100000 50000" \
   ./experiments/count_threshold_sweep.sh
 ```
 
-Cost, from the measured `mean_seconds` in the source file: one full pass over all
-17 counts is 2,157 s (0.60 h) per trial, so
+Cost, from the measured `mean_seconds` in each source file:
 
-- **30 trials from scratch: ~18.0 h**
-- **20 additional trials**, pooled with the existing 10: **~12.0 h**
+| Port | 1 trial x all counts | +20 trials (pooled) | 30 from scratch |
+|---|---|---|---|
+| C | 2,157 s | 12.0 h | 18.0 h |
+| Go (GC on) | 1,884 s | 10.5 h | 15.7 h |
+| Go (GC off), 4 counts | 744 s | 4.1 h | 6.2 h |
 
-Pooling is only valid if the machine state matches the original run (same binary,
-same `-repeat`/`-evict-kb`, no thermal or background-load drift); otherwise run the
-full 30 clean. Note the sweep reuses `experiments/work/key.bin` if present, which
-keeps the key fixed across runs — that is what makes pooling meaningful. Real
-timing is machine-dependent, so results will not reproduce the n=10 rates exactly;
-that divergence is data, not error.
+Pooling with the existing 10 is only valid if the machine state matches the
+original run (same binary, same `-repeat`/`-evict-kb`, no thermal or
+background-load drift); otherwise run the full 30 clean. The sweep reuses
+`experiments/work/key.bin` if present, which keeps the key fixed across runs —
+that is what makes pooling meaningful. Real timing is machine-dependent, so
+results will not reproduce the n=10 rates exactly; that divergence is data, not
+error.
+
+Note the GC-off command above changes the grid, so its runs are **not** poolable
+with the existing 4-count data at the new counts; treat it as a fresh sweep.
 
 ## Files
 
-- `experiments/count_threshold_C_30x_projected_summary.csv` — the projection.
-  Extra columns `ci_width_n10`, `ci_width_n30`, `ci_width_ratio` record the
-  precision gain. The `_projected_` in the filename is deliberate; keep it.
-- `experiments/project_n30.py` — generator for the CSV above.
+Projections (one per port):
+
+- `experiments/count_threshold_C_30x_projected_summary.csv`
+- `experiments/count_threshold_go_count_30x_projected_summary.csv`
+- `experiments/count_threshold_go_gcoff_count_30x_projected_summary.csv`
+
+Extra columns `ci_width_n10`, `ci_width_n30`, `ci_width_ratio` record the
+precision gain. The `_projected_` in each filename is deliberate; keep it.
+
+Tooling:
+
+- `experiments/project_n30.py` — generator for the CSVs above.
 - `experiments/plot_projection.py` — generator for the figures. Reads the two
   *summary* CSVs; imports `fit_logistic` / `interp_crossover` from
   `plot_threshold.py` so the threshold maths stays single-sourced.
 
-Note that `plot_threshold.py` cannot be pointed at this projection directly: it
-consumes per-trial `*_results.csv` files with a PASS/FAIL column. Expanding the
-projection into 30 synthetic PASS/FAIL rows would have produced a file
+Note that `plot_threshold.py` cannot be pointed at these projections directly: it
+consumes per-trial `*_results.csv` files with a PASS/FAIL column. Expanding a
+projection into 30 synthetic PASS/FAIL rows would produce a file
 indistinguishable from a genuine 30-trial run sitting in the same directory as the
-real ones, so `plot_projection.py` reads the summary instead. **Do not create that
-expanded results CSV**, even as a scratch file.
+real ones, so `plot_projection.py` reads the summary instead. **Do not create those
+expanded results CSVs**, even as scratch files.
 
-Regenerate everything with:
+Regenerate everything:
 
 ```bash
 cd /Users/huan/AES-Research-C
-python3 experiments/project_n30.py \
-    experiments/count_threshold_C_10x_summary.csv \
-    experiments/count_threshold_C_30x_projected_summary.csv
-python3 experiments/plot_projection.py \
-    experiments/count_threshold_C_10x_summary.csv \
-    experiments/count_threshold_C_30x_projected_summary.csv
+for spec in \
+  "C_10x:C_30x_projected:C port" \
+  "go_count:go_count_30x_projected:Go port, GC on" \
+  "go_gcoff_count:go_gcoff_count_30x_projected:Go port, GC off (GOGC=off)"
+do
+  IFS=: read -r src dst label <<<"$spec"
+  python3 experiments/project_n30.py \
+      "experiments/count_threshold_${src}_summary.csv" \
+      "experiments/count_threshold_${dst}_summary.csv"
+  python3 experiments/plot_projection.py \
+      "experiments/count_threshold_${src}_summary.csv" \
+      "experiments/count_threshold_${dst}_summary.csv" "$label"
+done
 ```
