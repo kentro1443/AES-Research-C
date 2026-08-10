@@ -1,0 +1,167 @@
+
+============================================================
+Sample collection
+============================================================
+  key file                 : /Users/huan/AES-Research-C/experiments/work/key.bin
+  output file              : /Users/huan/AES-Research-C/experiments/work/samples.bin
+  requested samples        : 100000
+  timing mode              : real measured encryption time
+  target AES               : aligned T-table AES with separate final table
+  NOTE real mode measures elapsed encryption time on this machine.
+  Recovery may fail or need many more samples if the timing signal is weak.
+  cache disturb bytes      : 2097152
+  repeats per sample       : 50
+  loaded_key               : 732979c8f71e1c71534e4e0f7a4914d4
+  Expanding the raw key into 176 bytes of AES-128 round keys.
+  round10_key              : f1196cf75a841ecbc2fb1becc3b69e43
+  Writing a verifier pair into the sample file header.
+  verifier_plaintext       : 2389d7a41bf6a3353258a862c0f0f6af
+  verifier_ciphertext      : 4ccca1763af2df56a880117d8c7bceaf
+  Generating plaintext/ciphertext/timing records.
+  First generated sample preview:
+  first_plaintext          : eabf8cba14a8841cc9da0ffc92837c6d
+  first_ciphertext         : 70f0cb595920c9e0d0d1056ffd57e12c
+  first_timing             : 49500
+  collection               : [#######.....................] 25000/100000 (25%) | estimated time remaining: 1m 1s
+  collection               : [##############..............] 50000/100000 (50%) | estimated time remaining: 41s
+  collection               : [#####################.......] 75000/100000 (75%) | estimated time remaining: 20s
+  collection               : [############################] 100000/100000 (100%) | estimated time remaining: 0s
+  Finished writing sample file.
+  key                      : 732979c8f71e1c71534e4e0f7a4914d4
+  samples                  : 100000
+  out                      : /Users/huan/AES-Research-C/experiments/work/samples.bin
+
+============================================================
+Final-round timing attack
+============================================================
+  sample file              : /Users/huan/AES-Research-C/experiments/work/samples.bin
+  recovered key out        : /Users/huan/AES-Research-C/experiments/work/final.bin
+  sample count             : 100000
+  sample mode              : 2
+  timing mode              : real measured encryption time
+  NOTE real timing mode is experimental; recovery is not guaranteed.
+  verifier_plaintext       : 2389d7a41bf6a3353258a862c0f0f6af
+  verifier_ciphertext      : 4ccca1763af2df56a880117d8c7bceaf
+  Building an average timing table for all 120 ciphertext-byte pairs.
+  For each pair (i,j), timings are grouped by delta = c[i] ^ c[j].
+  minimum timing           : 11459
+  outlier cutoff           : 22918
+  First sample read from file:
+  first_plaintext          : eabf8cba14a8841cc9da0ffc92837c6d
+  first_ciphertext         : 70f0cb595920c9e0d0d1056ffd57e12c
+  first_timing             : 49500
+  analysis read            : [#######.....................] 25000/100000 (25%)
+  analysis read            : [##############..............] 50000/100000 (50%)
+  analysis read            : [#####################.......] 75000/100000 (75%)
+  analysis read            : [############################] 100000/100000 (100%)
+  used samples             : 99955
+  ignored samples          : 45
+  Converting timing sums into averages.
+  Finding the lowest-average delta for pairs involving byte 0.
+
+  pair     delta    avg_time       observations
+  -------- -------- -------------- ------------
+  (0, 1)   69       12552.306      392         
+  (0, 2)   5e       12564.602      347         
+  (0, 3)   5b       12555.537      378         
+  (0, 4)   26       12562.306      366         
+  (0, 5)   4a       12567.298      373         
+  (0, 6)   14       12574.216      393         
+  (0, 7)   ef       12576.673      441         
+  (0, 8)   fd       12559.802      409         
+  (0, 9)   a2       12571.088      398         
+  (0,10)   ab       12575.398      397         
+  (0,11)   86       12564.755      396         
+  (0,12)   5c       12575.799      374         
+  (0,13)   f7       12570.822      371         
+  (0,14)   2f       12571.283      421         
+  (0,15)   88       12559.166      374         
+  round10 offsets          : 00 69 5e 5b 26 4a 14 ef fd a2 ab 86 5c f7 2f 88
+  Refining key-byte offsets with multi-start local search.
+
+  start    kind         score            iterations
+  -------- ------------ ---------------- ----------
+  0        byte0        1512502.170      5         
+  1        anchor       1512502.170      5         
+  2        anchor       1512337.338      3         
+  3        anchor       1512536.850      4         
+  4        anchor       1512629.992      3         
+  5        anchor       1512679.781      3         
+  6        anchor       1512648.834      3         
+  7        anchor       1512688.151      4         
+  8        anchor       1512498.081      6         
+  9        anchor       1512769.356      4         
+  10       anchor       1512611.255      3         
+  11       anchor       1512472.658      7         
+  12       anchor       1512528.718      5         
+  13       anchor       1512569.703      4         
+  14       anchor       1512640.047      5         
+  15       anchor       1512420.058      5         
+  16       anchor       1512526.264      6         
+  17       random       1512738.394      5         
+  18       random       1512584.237      4         
+  19       random       1512691.522      4         
+  20       random       1512622.664      5         
+  21       random       1512687.816      5         
+  22       random       1512622.743      4         
+  23       random       1512644.047      5         
+  24       random       1512583.881      3         
+  25       random       1512683.581      4         
+  26       random       1512438.130      8         
+  27       random       1512670.299      6         
+  28       random       1512651.366      5         
+  29       random       1512716.260      5         
+  30       random       1512417.366      4         
+  31       random       1512645.232      5         
+  32       random       1512545.221      5         
+  33       random       1512444.738      5         
+  34       random       1512416.651      8         
+  35       random       1512661.251      3         
+  36       random       1512640.447      7         
+  37       random       1512489.505      5         
+  38       random       1512718.160      5         
+  39       random       1512789.838      4         
+  40       random       1512566.062      4         
+  41       random       1512535.107      5         
+  42       random       1512445.355      4         
+  43       random       1512655.767      5         
+  44       random       1512516.078      4         
+  45       random       1512480.411      5         
+  46       random       1512697.491      4         
+  47       random       1512453.094      3         
+  48       random       1512728.834      4         
+  49       random       1512675.726      4         
+  50       random       1512453.560      4         
+  51       random       1512711.575      4         
+  52       random       1512606.713      5         
+  53       random       1512566.478      6         
+  54       random       1512513.414      4         
+  55       random       1512557.376      5         
+  56       random       1512623.632      6         
+  57       random       1512594.656      5         
+  58       random       1512584.063      6         
+  59       random       1512390.328      6         
+  60       random       1512505.769      5         
+  61       random       1512565.757      5         
+  62       random       1512657.491      5         
+  63       random       1512740.224      5         
+  64       random       1512605.377      5         
+  65       random       1512405.835      6         
+  66       random       1512713.162      5         
+  67       random       1512701.909      5         
+  68       random       1512603.305      4         
+  69       random       1512767.388      4         
+  70       random       1512784.878      2         
+  71       random       1512893.211      4         
+  72       random       1512459.595      4         
+  73       random       1512524.818      7         
+  74       random       1512620.650      6         
+  75       random       1512658.315      4         
+  76       random       1512659.402      5         
+  77       random       1512680.286      4         
+  78       random       1512826.535      3         
+  79       random       1512716.544      4         
+  80       random       1512547.982      4         
+  best unverified score    : 1512337.338
+  round10 offsets          : 00 69 55 f4 1b 7a 53 54 a8 a8 bb 86 b5 d4 ea e9
+no verified key candidate found

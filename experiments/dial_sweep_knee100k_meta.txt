@@ -1,0 +1,18 @@
+# dial_sweep run metadata
+timestamp_utc   : 2026-08-04T06:35:50Z
+git_commit      : 405b3de957c742746c42e73bfb816195aff39454
+git_dirty       : yes
+uname           : Darwin MacBook-Air-2.local 25.3.0 Darwin Kernel Version 25.3.0: Wed Jan 28 20:54:55 PST 2026; root:xnu-12377.91.3~2/RELEASE_ARM64_T8132 arm64
+cpu             : Apple M4
+ncpu            : 10
+memsize_bytes   : 17179869184
+fixed_count     : 100000
+base_repeat     : 50
+base_evict_kb   : 2048
+trials          : 10
+pass_min        : 5
+sweeps          : both
+interleave      : 1
+seed            : 11065
+repeat_values   : 10 20 30 50 75 100
+evict_values    : 256 512 1024 2048 4096

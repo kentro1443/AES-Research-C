@@ -1,0 +1,147 @@
+== build (go) ==
+== reusing existing fixed key /Users/huan/AES-Research-C/experiments/work/key.bin ==
+
+== dial sweep config ==
+impl=go  fixed count=100000  trials=10  pass_min=5  interleave=1  seed=31480
+repeat sweep (evict=2048): 10 50 100
+evict  sweep (repeat=50): 256 2048 4096
+CSV  -> /Users/huan/AES-Research-C/experiments/dial_sweep_go_gcoff_dial_results.csv
+META -> /Users/huan/AES-Research-C/experiments/dial_sweep_go_gcoff_dial_meta.txt
+
+== interleaved run order (seed=31480) ==
+-- run 1/60 --
+   [evict] count=100000 repeat=50 evict_kb=2048 trial=10: FAIL (exit 2, 82s, min_time=11492, score=1510807.489)
+-- run 2/60 --
+   [evict] count=100000 repeat=50 evict_kb=256 trial=4: FAIL (exit 2, 11s, min_time=10752, score=1471734.495)
+-- run 3/60 --
+   [repeat] count=100000 repeat=100 evict_kb=2048 trial=7: FAIL (exit 2, 165s, min_time=24045, score=3109149.071)
+-- run 4/60 --
+   [repeat] count=100000 repeat=50 evict_kb=2048 trial=10: FAIL (exit 2, 82s, min_time=11499, score=1512431.418)
+-- run 5/60 --
+   [repeat] count=100000 repeat=10 evict_kb=2048 trial=9: FAIL (exit 2, 17s, min_time=2126, score=302562.609)
+-- run 6/60 --
+   [repeat] count=100000 repeat=10 evict_kb=2048 trial=8: FAIL (exit 2, 16s, min_time=2164, score=302467.872)
+-- run 7/60 --
+   [evict] count=100000 repeat=50 evict_kb=4096 trial=7: FAIL (exit 2, 164s, min_time=11625, score=1534363.817)
+-- run 8/60 --
+   [repeat] count=100000 repeat=100 evict_kb=2048 trial=1: FAIL (exit 2, 164s, min_time=23169, score=3053747.625)
+-- run 9/60 --
+   [repeat] count=100000 repeat=10 evict_kb=2048 trial=5: FAIL (exit 2, 17s, min_time=2206, score=304006.463)
+-- run 10/60 --
+   [repeat] count=100000 repeat=50 evict_kb=2048 trial=5: FAIL (exit 2, 82s, min_time=11581, score=1526795.909)
+-- run 11/60 --
+   [evict] count=100000 repeat=50 evict_kb=2048 trial=3: FAIL (exit 2, 87s, min_time=11705, score=1528898.613)
+-- run 12/60 --
+   [evict] count=100000 repeat=50 evict_kb=4096 trial=9: FAIL (exit 2, 163s, min_time=11832, score=1547571.701)
+-- run 13/60 --
+   [repeat] count=100000 repeat=50 evict_kb=2048 trial=3: FAIL (exit 2, 83s, min_time=11709, score=1528582.573)
+-- run 14/60 --
+   [repeat] count=100000 repeat=10 evict_kb=2048 trial=4: FAIL (exit 2, 16s, min_time=2164, score=301947.290)
+-- run 15/60 --
+   [repeat] count=100000 repeat=10 evict_kb=2048 trial=10: FAIL (exit 2, 17s, min_time=2164, score=301897.017)
+-- run 16/60 --
+   [repeat] count=100000 repeat=50 evict_kb=2048 trial=9: FAIL (exit 2, 82s, min_time=11210, score=1508438.329)
+-- run 17/60 --
+   [evict] count=100000 repeat=50 evict_kb=2048 trial=2: FAIL (exit 2, 85s, min_time=11503, score=1513476.978)
+-- run 18/60 --
+   [evict] count=100000 repeat=50 evict_kb=4096 trial=8: FAIL (exit 2, 163s, min_time=11958, score=1546151.311)
+-- run 19/60 --
+   [evict] count=100000 repeat=50 evict_kb=256 trial=2: FAIL (exit 2, 12s, min_time=10961, score=1483686.843)
+-- run 20/60 --
+   [repeat] count=100000 repeat=100 evict_kb=2048 trial=3: FAIL (exit 2, 164s, min_time=23458, score=3046857.687)
+-- run 21/60 --
+   [repeat] count=100000 repeat=100 evict_kb=2048 trial=5: FAIL (exit 2, 164s, min_time=23170, score=3027528.362)
+-- run 22/60 --
+   [evict] count=100000 repeat=50 evict_kb=256 trial=3: FAIL (exit 2, 11s, min_time=10917, score=1481147.154)
+-- run 23/60 --
+   [repeat] count=100000 repeat=10 evict_kb=2048 trial=3: FAIL (exit 2, 17s, min_time=2206, score=305250.254)
+-- run 24/60 --
+   [repeat] count=100000 repeat=50 evict_kb=2048 trial=4: FAIL (exit 2, 82s, min_time=11373, score=1504629.469)
+-- run 25/60 --
+   [evict] count=100000 repeat=50 evict_kb=2048 trial=5: PASS (exit 0, 83s, min_time=11459, score=1513552.366)
+-- run 26/60 --
+   [evict] count=100000 repeat=50 evict_kb=4096 trial=3: FAIL (exit 2, 163s, min_time=11831, score=1530941.197)
+-- run 27/60 --
+   [evict] count=100000 repeat=50 evict_kb=2048 trial=7: FAIL (exit 2, 83s, min_time=11500, score=1521028.800)
+-- run 28/60 --
+   [evict] count=100000 repeat=50 evict_kb=256 trial=7: FAIL (exit 2, 11s, min_time=10960, score=1484426.978)
+-- run 29/60 --
+   [evict] count=100000 repeat=50 evict_kb=256 trial=1: FAIL (exit 2, 11s, min_time=11083, score=1483455.170)
+-- run 30/60 --
+   [repeat] count=100000 repeat=10 evict_kb=2048 trial=7: FAIL (exit 2, 17s, min_time=2168, score=303195.804)
+-- run 31/60 --
+   [evict] count=100000 repeat=50 evict_kb=4096 trial=6: FAIL (exit 2, 164s, min_time=11750, score=1540047.945)
+-- run 32/60 --
+   [evict] count=100000 repeat=50 evict_kb=4096 trial=5: FAIL (exit 2, 167s, min_time=11789, score=1535342.081)
+-- run 33/60 --
+   [evict] count=100000 repeat=50 evict_kb=2048 trial=8: FAIL (exit 2, 82s, min_time=11961, score=1552041.429)
+-- run 34/60 --
+   [repeat] count=100000 repeat=50 evict_kb=2048 trial=1: FAIL (exit 2, 82s, min_time=11536, score=1518386.801)
+-- run 35/60 --
+   [repeat] count=100000 repeat=50 evict_kb=2048 trial=6: FAIL (exit 2, 84s, min_time=11497, score=1528986.017)
+-- run 36/60 --
+   [evict] count=100000 repeat=50 evict_kb=2048 trial=6: FAIL (exit 2, 84s, min_time=11625, score=1554942.584)
+-- run 37/60 --
+   [evict] count=100000 repeat=50 evict_kb=4096 trial=4: FAIL (exit 2, 164s, min_time=11833, score=1547315.725)
+-- run 38/60 --
+   [repeat] count=100000 repeat=10 evict_kb=2048 trial=6: FAIL (exit 2, 17s, min_time=2164, score=302586.839)
+-- run 39/60 --
+   [repeat] count=100000 repeat=100 evict_kb=2048 trial=4: FAIL (exit 2, 178s, min_time=24749, score=3304025.550)
+-- run 40/60 --
+   [evict] count=100000 repeat=50 evict_kb=256 trial=8: FAIL (exit 2, 12s, min_time=11915, score=1573739.150)
+-- run 41/60 --
+   [evict] count=100000 repeat=50 evict_kb=2048 trial=1: FAIL (exit 2, 88s, min_time=12251, score=1642695.945)
+-- run 42/60 --
+   [evict] count=100000 repeat=50 evict_kb=4096 trial=1: FAIL (exit 2, 175s, min_time=11791, score=1599506.738)
+-- run 43/60 --
+   [evict] count=100000 repeat=50 evict_kb=256 trial=9: FAIL (exit 2, 12s, min_time=11125, score=1486968.870)
+-- run 44/60 --
+   [repeat] count=100000 repeat=100 evict_kb=2048 trial=6: FAIL (exit 2, 166s, min_time=23197, score=3036413.508)
+-- run 45/60 --
+   [repeat] count=100000 repeat=50 evict_kb=2048 trial=2: FAIL (exit 2, 82s, min_time=11585, score=1518484.463)
+-- run 46/60 --
+   [evict] count=100000 repeat=50 evict_kb=256 trial=5: FAIL (exit 2, 12s, min_time=10666, score=1481391.955)
+-- run 47/60 --
+   [repeat] count=100000 repeat=10 evict_kb=2048 trial=2: FAIL (exit 2, 16s, min_time=2169, score=303879.772)
+-- run 48/60 --
+   [evict] count=100000 repeat=50 evict_kb=2048 trial=4: FAIL (exit 2, 84s, min_time=11539, score=1513945.999)
+-- run 49/60 --
+   [evict] count=100000 repeat=50 evict_kb=4096 trial=10: FAIL (exit 2, 165s, min_time=11876, score=1552604.054)
+-- run 50/60 --
+   [repeat] count=100000 repeat=100 evict_kb=2048 trial=9: FAIL (exit 2, 164s, min_time=23165, score=3038036.584)
+-- run 51/60 --
+   [repeat] count=100000 repeat=10 evict_kb=2048 trial=1: FAIL (exit 2, 17s, min_time=2165, score=304934.308)
+-- run 52/60 --
+   [evict] count=100000 repeat=50 evict_kb=4096 trial=2: FAIL (exit 2, 164s, min_time=11830, score=1540619.642)
+-- run 53/60 --
+   [repeat] count=100000 repeat=50 evict_kb=2048 trial=8: FAIL (exit 2, 82s, min_time=11500, score=1509871.055)
+-- run 54/60 --
+   [repeat] count=100000 repeat=100 evict_kb=2048 trial=2: FAIL (exit 2, 174s, min_time=23329, score=3195261.426)
+-- run 55/60 --
+   [repeat] count=100000 repeat=100 evict_kb=2048 trial=10: FAIL (exit 2, 176s, min_time=24544, score=3232255.187)
+-- run 56/60 --
+   [evict] count=100000 repeat=50 evict_kb=256 trial=10: FAIL (exit 2, 12s, min_time=11584, score=1533027.514)
+-- run 57/60 --
+   [repeat] count=100000 repeat=100 evict_kb=2048 trial=8: FAIL (exit 2, 165s, min_time=23325, score=3046942.566)
+-- run 58/60 --
+   [evict] count=100000 repeat=50 evict_kb=2048 trial=9: FAIL (exit 2, 82s, min_time=11747, score=1534999.127)
+-- run 59/60 --
+   [evict] count=100000 repeat=50 evict_kb=256 trial=6: FAIL (exit 2, 11s, min_time=10874, score=1474477.346)
+-- run 60/60 --
+   [repeat] count=100000 repeat=50 evict_kb=2048 trial=7: FAIL (exit 2, 83s, min_time=11459, score=1512337.338)
+
+== summary: -repeat sweep (count=100000, evict=2048) ==
+   repeat : passes/trials : verdict
+   10 : 0/10 : fail
+   50 : 0/10 : fail
+   100 : 0/10 : fail
+
+== summary: -evict-kb sweep (count=100000, repeat=50) ==
+   evict_kb : passes/trials : verdict
+   256 : 0/10 : fail
+   2048 : 1/10 : fail
+   4096 : 0/10 : fail
+
+Full per-trial data: /Users/huan/AES-Research-C/experiments/dial_sweep_go_gcoff_dial_results.csv
+Run metadata:        /Users/huan/AES-Research-C/experiments/dial_sweep_go_gcoff_dial_meta.txt
+Done.

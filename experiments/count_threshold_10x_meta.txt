@@ -1,0 +1,15 @@
+# count_threshold_sweep run metadata
+timestamp_utc   : 2026-07-29T18:00:24Z
+git_commit      : 405b3de957c742746c42e73bfb816195aff39454
+git_dirty       : yes
+uname           : Darwin MacBook-Air-2.local 25.3.0 Darwin Kernel Version 25.3.0: Wed Jan 28 20:54:55 PST 2026; root:xnu-12377.91.3~2/RELEASE_ARM64_T8132 arm64
+cpu             : Apple M4
+ncpu            : 10
+memsize_bytes   : 17179869184
+repeat          : 50
+evict_kb        : 2048
+trials          : 10
+pass_min        : 2
+interleave      : 1
+seed            : 23394
+counts          : 500000 400000 300000 250000 200000 150000 100000 75000 60000 50000 45000 40000 35000 30000 25000 20000 10000

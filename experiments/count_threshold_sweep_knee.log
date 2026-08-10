@@ -1,0 +1,83 @@
+== build ==
+make: Nothing to be done for `all'.
+== reusing existing fixed key /Users/huan/AES-Research-C/experiments/work/key.bin ==
+
+== sweep config ==
+repeat=50  evict_kb=2048  trials=8  pass_min=5
+counts: 75000 60000 50000 45000 40000 30000
+planned total sample-units: 2400000 (ETA refines after the first run)
+
+CSV -> /Users/huan/AES-Research-C/experiments/count_threshold_knee_results.csv
+
+-- count=75000 --
+   trial 1/8: FAIL (exit 2, 71s, min_time=106, score=17064.049)  ETA~36m41s
+   trial 2/8: PASS (exit 0, 71s, min_time=118, score=17897.883)  ETA~35m30s
+   trial 3/8: PASS (exit 0, 71s, min_time=112, score=17526.455)  ETA~34m19s
+   trial 4/8: FAIL (exit 2, 71s, min_time=115, score=18314.841)  ETA~33m8s
+   trial 5/8: PASS (exit 0, 71s, min_time=114, score=17622.448)  ETA~31m57s
+   trial 6/8: PASS (exit 0, 71s, min_time=117, score=17630.996)  ETA~30m46s
+   trial 7/8: PASS (exit 0, 71s, min_time=110, score=17469.562)  ETA~29m35s
+   trial 8/8: PASS (exit 0, 71s, min_time=117, score=16965.021)  ETA~28m24s
+   => count=75000  passes=6/8  [PASS]
+-- count=60000 --
+   trial 1/8: PASS (exit 0, 56s, min_time=109, score=16963.936)  ETA~27m25s
+   trial 2/8: PASS (exit 0, 57s, min_time=111, score=16945.025)  ETA~26m29s
+   trial 3/8: PASS (exit 0, 57s, min_time=110, score=16951.088)  ETA~25m32s
+   trial 4/8: FAIL (exit 2, 57s, min_time=114, score=17530.875)  ETA~24m36s
+   trial 5/8: PASS (exit 0, 56s, min_time=112, score=17744.401)  ETA~23m38s
+   trial 6/8: PASS (exit 0, 58s, min_time=113, score=16941.451)  ETA~22m43s
+   trial 7/8: PASS (exit 0, 56s, min_time=115, score=16926.224)  ETA~21m45s
+   trial 8/8: FAIL (exit 2, 57s, min_time=118, score=17759.942)  ETA~20m49s
+   => count=60000  passes=6/8  [PASS]
+-- count=50000 --
+   trial 1/8: PASS (exit 0, 48s, min_time=114, score=17436.162)  ETA~20m2s
+   trial 2/8: FAIL (exit 2, 47s, min_time=113, score=16917.948)  ETA~19m14s
+   trial 3/8: PASS (exit 0, 48s, min_time=111, score=17663.197)  ETA~18m28s
+   trial 4/8: PASS (exit 0, 47s, min_time=111, score=16915.265)  ETA~17m40s
+   trial 5/8: FAIL (exit 2, 47s, min_time=115, score=17441.432)  ETA~16m52s
+   trial 6/8: FAIL (exit 2, 48s, min_time=117, score=17431.722)  ETA~16m6s
+   trial 7/8: PASS (exit 0, 47s, min_time=113, score=17102.588)  ETA~15m18s
+   trial 8/8: PASS (exit 0, 47s, min_time=107, score=17637.452)  ETA~14m30s
+   => count=50000  passes=5/8  [PASS]
+-- count=45000 --
+   trial 1/8: FAIL (exit 2, 43s, min_time=115, score=17189.434)  ETA~13m48s
+   trial 2/8: PASS (exit 0, 43s, min_time=115, score=16915.148)  ETA~13m6s
+   trial 3/8: FAIL (exit 2, 43s, min_time=117, score=17458.222)  ETA~12m23s
+   trial 4/8: FAIL (exit 2, 43s, min_time=114, score=17092.437)  ETA~11m41s
+   trial 5/8: PASS (exit 0, 43s, min_time=115, score=17570.446)  ETA~10m58s
+   trial 6/8: FAIL (exit 2, 42s, min_time=113, score=17494.464)  ETA~10m15s
+   trial 7/8: FAIL (exit 2, 43s, min_time=115, score=17565.391)  ETA~9m33s
+   trial 8/8: FAIL (exit 2, 43s, min_time=117, score=18334.066)  ETA~8m50s
+   => count=45000  passes=2/8  [fail]
+-- count=40000 --
+   trial 1/8: FAIL (exit 2, 38s, min_time=109, score=17025.158)  ETA~8m12s
+   trial 2/8: FAIL (exit 2, 38s, min_time=117, score=17086.139)  ETA~7m35s
+   trial 3/8: PASS (exit 0, 37s, min_time=115, score=17731.046)  ETA~6m56s
+   trial 4/8: PASS (exit 0, 39s, min_time=116, score=17588.617)  ETA~6m19s
+   trial 5/8: FAIL (exit 2, 38s, min_time=116, score=17015.218)  ETA~5m41s
+   trial 6/8: FAIL (exit 2, 38s, min_time=109, score=16980.834)  ETA~5m3s
+   trial 7/8: FAIL (exit 2, 38s, min_time=113, score=16893.058)  ETA~4m25s
+   trial 8/8: FAIL (exit 2, 38s, min_time=111, score=16914.227)  ETA~3m47s
+   => count=40000  passes=2/8  [fail]
+-- count=30000 --
+   trial 1/8: FAIL (exit 2, 28s, min_time=114, score=17571.429)  ETA~3m19s
+   trial 2/8: FAIL (exit 2, 29s, min_time=114, score=17508.613)  ETA~2m50s
+   trial 3/8: FAIL (exit 2, 28s, min_time=116, score=17615.367)  ETA~2m22s
+   trial 4/8: FAIL (exit 2, 29s, min_time=109, score=18237.824)  ETA~1m53s
+   trial 5/8: FAIL (exit 2, 29s, min_time=115, score=18509.906)  ETA~1m25s
+   trial 6/8: FAIL (exit 2, 30s, min_time=120, score=18183.212)  ETA~0m56s
+   trial 7/8: FAIL (exit 2, 29s, min_time=119, score=17872.432)  ETA~0m28s
+   trial 8/8: FAIL (exit 2, 30s, min_time=121, score=18184.919)  ETA~0m0s
+   => count=30000  passes=0/8  [fail]
+
+== summary (count : passes/trials : verdict) ==
+   75000 : 6/8 : PASS
+   60000 : 6/8 : PASS
+   50000 : 5/8 : PASS
+   45000 : 2/8 : fail
+   40000 : 2/8 : fail
+   30000 : 0/8 : fail
+
+THRESHOLD (lowest count still passing >= 5/8): 50000
+Full per-trial data: /Users/huan/AES-Research-C/experiments/count_threshold_knee_results.csv
+Done.

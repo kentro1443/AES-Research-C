@@ -1,0 +1,51 @@
+== build ==
+make: Nothing to be done for `all'.
+== reusing existing fixed key /Users/huan/AES-Research-C/experiments/work/key.bin ==
+
+== dial sweep config ==
+fixed count=150000  trials=8  pass_min=5
+repeat sweep (evict=2048): 10 20 30 50 75 100
+evict  sweep (repeat=50): 2048 1024 512
+CSV -> /Users/huan/AES-Research-C/experiments/dial_sweep_pothole_results.csv
+
+
+########## SWEEP 2: -evict-kb  (count=150000, repeat=50 fixed) ##########
+-- evict: count=150000 repeat=50 evict_kb=2048 --
+   trial 1/8: PASS (exit 0, 142s, min_time=107, score=16900.421)
+   trial 2/8: PASS (exit 0, 141s, min_time=109, score=17418.524)
+   trial 3/8: PASS (exit 0, 142s, min_time=107, score=16785.734)
+   trial 4/8: PASS (exit 0, 142s, min_time=109, score=16819.915)
+   trial 5/8: PASS (exit 0, 141s, min_time=106, score=17237.820)
+   trial 6/8: PASS (exit 0, 142s, min_time=109, score=16828.653)
+   trial 7/8: PASS (exit 0, 142s, min_time=110, score=17474.889)
+   trial 8/8: PASS (exit 0, 141s, min_time=110, score=16938.602)
+   => passes=8/8  [PASS]
+-- evict: count=150000 repeat=50 evict_kb=1024 --
+   trial 1/8: PASS (exit 0, 81s, min_time=110, score=17259.419)
+   trial 2/8: PASS (exit 0, 80s, min_time=110, score=16318.895)
+   trial 3/8: PASS (exit 0, 81s, min_time=107, score=16714.392)
+   trial 4/8: PASS (exit 0, 80s, min_time=110, score=16504.997)
+   trial 5/8: PASS (exit 0, 81s, min_time=110, score=16147.374)
+   trial 6/8: FAIL (exit 2, 80s, min_time=110, score=16845.012)
+   trial 7/8: PASS (exit 0, 81s, min_time=106, score=16233.778)
+   trial 8/8: PASS (exit 0, 80s, min_time=112, score=17073.261)
+   => passes=7/8  [PASS]
+-- evict: count=150000 repeat=50 evict_kb=512 --
+   trial 1/8: PASS (exit 0, 50s, min_time=111, score=16708.365)
+   trial 2/8: PASS (exit 0, 49s, min_time=112, score=16789.708)
+   trial 3/8: PASS (exit 0, 50s, min_time=106, score=15667.776)
+   trial 4/8: PASS (exit 0, 50s, min_time=110, score=16020.479)
+   trial 5/8: PASS (exit 0, 49s, min_time=110, score=16105.808)
+   trial 6/8: PASS (exit 0, 50s, min_time=111, score=16466.658)
+   trial 7/8: PASS (exit 0, 50s, min_time=101, score=15904.408)
+   trial 8/8: PASS (exit 0, 49s, min_time=103, score=15737.875)
+   => passes=8/8  [PASS]
+
+== summary: -evict-kb sweep (count=150000, repeat=50) ==
+   evict_kb : passes/trials : verdict
+   2048 : 8/8 : PASS
+   1024 : 7/8 : PASS
+   512 : 8/8 : PASS
+
+Full per-trial data: /Users/huan/AES-Research-C/experiments/dial_sweep_pothole_results.csv
+Done.

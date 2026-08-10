@@ -1,0 +1,89 @@
+% Analysis / Discussion -- drop-in fragment. Requires \usepackage{booktabs}.
+
+\section{Analysis}
+\label{sec:analysis}
+
+\subsection{The Threshold Is an Averaging Effect}
+\label{sec:analysis-statistical}
+The flatness of \texttt{min\_time} and score across trace count
+(Section~\ref{sec:results-threshold}) localises the mechanism. The per-trace
+cache-collision signal---the small timing difference the attack exploits---is a
+fixed quantity that does not depend on how many traces are collected. What
+changes with count is the variance of each group mean $T_{i,j}[d]$: with more
+traces per ciphertext-difference group, the correct final-round relation
+separates from the noise floor more reliably. Recovery is therefore governed by
+whether the group-mean estimates are stable enough to rank the correct relation
+first, which is a smooth, probabilistic function of count---hence the
+psychometric curve rather than a hard boundary.
+
+\subsection{Why Go Needs About Five Times More Traces}
+\label{sec:analysis-crosslang}
+The same attack, on the same key, recovers with $\approx 5\times$ more traces in
+Go than in C. Because the recovery logic is common, the difference originates in
+collection: Go's measured timings are a noisier estimate of the same underlying
+signal, so more traces are needed to average that noise down to the level where
+the correct relation wins. The garbage-collector ablation
+(Section~\ref{sec:results-gc}) sharpens this. If GC pauses were the dominant
+noise source, disabling the collector would move the threshold substantially;
+instead it moves $N_{50}$ by only $\approx 8\%$ and leaves the gap to C intact.
+The residual noise is therefore not the collector but the broader managed-runtime
+measurement path---bounds-checked array access, scheduler quanta, and coarser or
+higher-overhead timing than the C collector. In short: Go's disadvantage is
+real, reproducible, and a property of \emph{measurement}, not of the algorithm
+or of the garbage collector specifically.\footnote{Absolute \texttt{min\_time}
+values are far larger in Go than in C; whether that reflects timer units or true
+overhead requires inspecting each collector's timing primitive, so we base the
+cross-language claim on recovery reliability rather than on raw timing
+magnitudes.}
+
+\subsection{Dials: Signal Strength over Averaging, and a Design Lesson}
+\label{sec:analysis-dial}
+Within C at the 100k knee, additional \texttt{-repeat} does not help and the
+largest \texttt{-evict-kb} helps most. This is consistent with the
+averaging/signal split above: at a count near the threshold, the binding
+constraint is the strength of the per-trace collision signal (improved by
+stronger cache eviction), not additional per-trace averaging---and very large
+\texttt{-repeat} may even lengthen each measurement enough to admit more
+environmental perturbation. The Go dial sweep carries a methodological lesson
+rather than a result: fixing the dial-sweep count at C's knee (100k) placed it
+below Go's operating threshold ($\approx 265$k), so the sweep could not probe
+Go's dial sensitivity. A per-implementation dial count, chosen relative to each
+implementation's own threshold, would be required to compare dial effects across
+languages.
+
+\subsection{Positioning Against Prior Work}
+\label{sec:analysis-priorwork}
+The implemented attack follows the final-round cache-collision model of Bonneau
+and Mironov, whose expanded final-round attack recovers a key from a median of
+$2^{13}$--$2^{14.3}$ samples under cache eviction on 2006-era processors. Our C
+threshold ($N_{50}\approx 2^{15.6}$; high-reliability $\approx 2^{16.2}$) is
+roughly one order of magnitude higher. This is expected rather than
+contradictory: the comparison mixes algorithm with platform and instrumentation.
+Their figures use hardware cycle counters on a Pentium III/UltraSPARC, whereas
+this laboratory records aggregate wall-clock time on an Apple M4 with a very
+different cache hierarchy and timing resolution. The agreement to within an order
+of magnitude, on entirely different hardware and with a coarser timer, indicates
+that the leakage mechanism reproduces as predicted; the absolute count is a
+property of this platform and instrument, not a universal constant.
+
+\subsection{Threats to Validity}
+\label{sec:analysis-threats}
+\begin{itemize}
+  \item \textbf{Single key.} All runs reuse one fixed AES key to isolate trace
+        count; thresholds may vary across keys.
+  \item \textbf{Sampling uncertainty.} Ten trials per count yield wide Wilson
+        intervals, especially near 0/10 and 10/10; individual dial points should
+        not be over-interpreted, and $N_{50}$ is an estimate, not a sharp value.
+  \item \textbf{Run-to-run environment sensitivity.} Two clean C sweeps place the
+        threshold near 50k and 100k respectively, and a contaminated sweep near
+        150k; the threshold is sensitive to background load, which we control by
+        the environment gate but cannot eliminate on a general-purpose machine.
+  \item \textbf{Native-collection confound.} The cross-language comparison uses
+        each language's own traces (different seeds), so it measures
+        runtime-in-collection, not shared-dataset algorithmic consistency;
+        the latter (draft RQ2) and stage-level processing time (RQ3) remain
+        future work.
+  \item \textbf{Reduced Go(GC-off) grid and platform confound.} The ablation uses
+        a coarse count grid, and the prior-work comparison spans different
+        hardware eras; both are stated where the numbers are used.
+\end{itemize}

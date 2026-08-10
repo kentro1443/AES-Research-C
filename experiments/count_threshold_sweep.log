@@ -1,0 +1,121 @@
+== build ==
+make: Nothing to be done for `all'.
+== reusing existing fixed key /Users/huan/AES-Research-C/experiments/work/key.bin ==
+
+== sweep config ==
+repeat=50  evict_kb=2048  trials=3  pass_min=2  interleave=0  seed=17941
+counts: 500000 400000 300000 250000 200000 150000 100000 75000 60000 50000 45000 40000 35000 30000 25000 20000 10000
+planned total sample-units: 6870000 (ETA refines after the first run)
+
+CSV  -> /Users/huan/AES-Research-C/experiments/count_threshold_results.csv
+META -> /Users/huan/AES-Research-C/experiments/count_threshold_meta.txt
+
+-- count=500000 --
+   count=500000 trial=1: PASS (exit 0, 471s, min_time=112, score=16978.051, used=499198, ignored=802)  ETA~100m0s
+   count=500000 trial=2: PASS (exit 0, 802s, min_time=105, score=17728.502, used=498808, ignored=1192)  ETA~124m32s
+   count=500000 trial=3: PASS (exit 0, 4341s, min_time=98, score=18031.130, used=493854, ignored=6146)  ETA~334m58s
+   => count=500000  passes=3/3  [PASS]
+-- count=400000 --
+   count=400000 trial=1: PASS (exit 0, 1473s, min_time=139, score=20976.139, used=399661, ignored=339)  ETA~308m58s
+   count=400000 trial=2: PASS (exit 0, 450s, min_time=140, score=21144.317, used=399732, ignored=268)  ETA~249m35s
+   count=400000 trial=3: PASS (exit 0, 453s, min_time=133, score=20427.818, used=398464, ignored=1536)  ETA~205m40s
+   => count=400000  passes=3/3  [PASS]
+-- count=300000 --
+   count=300000 trial=1: PASS (exit 0, 339s, min_time=136, score=20134.287, used=299820, ignored=180)  ETA~179m4s
+   count=300000 trial=2: FAIL (exit 2, 338s, min_time=142, score=21590.646, used=299764, ignored=236)  ETA~156m16s
+   count=300000 trial=3: PASS (exit 0, 337s, min_time=143, score=21031.321, used=299856, ignored=144)  ETA~136m18s
+   => count=300000  passes=2/3  [PASS]
+-- count=250000 --
+   count=250000 trial=1: PASS (exit 0, 282s, min_time=133, score=21281.765, used=249742, ignored=258)  ETA~121m24s
+   count=250000 trial=2: PASS (exit 0, 285s, min_time=140, score=21196.631, used=249827, ignored=173)  ETA~107m46s
+   count=250000 trial=3: PASS (exit 0, 281s, min_time=143, score=21327.118, used=249832, ignored=168)  ETA~95m7s
+   => count=250000  passes=3/3  [PASS]
+-- count=200000 --
+   count=200000 trial=1: FAIL (exit 2, 225s, min_time=142, score=21247.512, used=199867, ignored=133)  ETA~85m38s
+   count=200000 trial=2: PASS (exit 0, 225s, min_time=142, score=20381.788, used=199908, ignored=92)  ETA~76m37s
+   count=200000 trial=3: FAIL (exit 2, 225s, min_time=143, score=21600.354, used=199857, ignored=143)  ETA~68m3s
+   => count=200000  passes=1/3  [fail]
+-- count=150000 --
+   count=150000 trial=1: PASS (exit 0, 169s, min_time=141, score=20242.130, used=149923, ignored=77)  ETA~61m52s
+   count=150000 trial=2: PASS (exit 0, 169s, min_time=141, score=20385.157, used=149910, ignored=90)  ETA~55m52s
+   count=150000 trial=3: PASS (exit 0, 169s, min_time=141, score=20338.215, used=149912, ignored=88)  ETA~50m3s
+   => count=150000  passes=3/3  [PASS]
+-- count=100000 --
+   count=100000 trial=1: FAIL (exit 2, 112s, min_time=146, score=21089.022, used=99953, ignored=47)  ETA~46m16s
+   count=100000 trial=2: PASS (exit 0, 114s, min_time=137, score=21050.114, used=99913, ignored=87)  ETA~42m33s
+   count=100000 trial=3: FAIL (exit 2, 112s, min_time=144, score=21232.241, used=99939, ignored=61)  ETA~38m54s
+   => count=100000  passes=1/3  [fail]
+-- count=75000 --
+   count=75000 trial=1: FAIL (exit 2, 85s, min_time=143, score=20571.480, used=74954, ignored=46)  ETA~36m12s
+   count=75000 trial=2: FAIL (exit 2, 84s, min_time=141, score=21204.257, used=74953, ignored=47)  ETA~33m32s
+   count=75000 trial=3: FAIL (exit 2, 85s, min_time=144, score=21123.243, used=74964, ignored=36)  ETA~30m54s
+   => count=75000  passes=0/3  [fail]
+-- count=60000 --
+   count=60000 trial=1: FAIL (exit 2, 67s, min_time=144, score=20430.326, used=59975, ignored=25)  ETA~28m49s
+   count=60000 trial=2: FAIL (exit 2, 68s, min_time=145, score=21461.403, used=59958, ignored=42)  ETA~26m45s
+   count=60000 trial=3: FAIL (exit 2, 68s, min_time=137, score=20341.716, used=59950, ignored=50)  ETA~24m42s
+   => count=60000  passes=0/3  [fail]
+-- count=50000 --
+   count=50000 trial=1: FAIL (exit 2, 56s, min_time=144, score=20944.889, used=49977, ignored=23)  ETA~23m0s
+   count=50000 trial=2: FAIL (exit 2, 56s, min_time=145, score=21070.793, used=49976, ignored=24)  ETA~21m19s
+   count=50000 trial=3: FAIL (exit 2, 57s, min_time=139, score=21493.525, used=49967, ignored=33)  ETA~19m39s
+   => count=50000  passes=0/3  [fail]
+-- count=45000 --
+   count=45000 trial=1: FAIL (exit 2, 51s, min_time=139, score=20438.319, used=44959, ignored=41)  ETA~18m10s
+   count=45000 trial=2: FAIL (exit 2, 51s, min_time=145, score=20781.871, used=44984, ignored=16)  ETA~16m41s
+   count=45000 trial=3: FAIL (exit 2, 51s, min_time=147, score=21097.508, used=44982, ignored=18)  ETA~15m12s
+   => count=45000  passes=0/3  [fail]
+-- count=40000 --
+   count=40000 trial=1: FAIL (exit 2, 45s, min_time=142, score=21393.779, used=39964, ignored=36)  ETA~13m54s
+   count=40000 trial=2: FAIL (exit 2, 46s, min_time=138, score=20619.493, used=39972, ignored=28)  ETA~12m36s
+   count=40000 trial=3: FAIL (exit 2, 45s, min_time=148, score=21282.955, used=39978, ignored=22)  ETA~11m19s
+   => count=40000  passes=0/3  [fail]
+-- count=35000 --
+   count=35000 trial=1: FAIL (exit 2, 39s, min_time=142, score=20317.330, used=34987, ignored=13)  ETA~10m12s
+   count=35000 trial=2: FAIL (exit 2, 40s, min_time=141, score=21268.354, used=34960, ignored=40)  ETA~9m5s
+   count=35000 trial=3: FAIL (exit 2, 39s, min_time=131, score=20484.882, used=34953, ignored=47)  ETA~7m58s
+   => count=35000  passes=0/3  [fail]
+-- count=30000 --
+   count=30000 trial=1: FAIL (exit 2, 34s, min_time=144, score=21068.387, used=29983, ignored=17)  ETA~7m1s
+   count=30000 trial=2: FAIL (exit 2, 34s, min_time=145, score=20325.469, used=29983, ignored=17)  ETA~6m4s
+   count=30000 trial=3: FAIL (exit 2, 34s, min_time=144, score=21269.217, used=29985, ignored=15)  ETA~5m7s
+   => count=30000  passes=0/3  [fail]
+-- count=25000 --
+   count=25000 trial=1: FAIL (exit 2, 28s, min_time=145, score=20308.810, used=24982, ignored=18)  ETA~4m20s
+   count=25000 trial=2: FAIL (exit 2, 28s, min_time=144, score=20364.397, used=24991, ignored=9)  ETA~3m33s
+   count=25000 trial=3: FAIL (exit 2, 28s, min_time=146, score=21244.788, used=24983, ignored=17)  ETA~2m47s
+   => count=25000  passes=0/3  [fail]
+-- count=20000 --
+   count=20000 trial=1: FAIL (exit 2, 24s, min_time=144, score=20141.754, used=19988, ignored=12)  ETA~2m9s
+   count=20000 trial=2: FAIL (exit 2, 23s, min_time=142, score=20240.367, used=19990, ignored=10)  ETA~1m32s
+   count=20000 trial=3: FAIL (exit 2, 23s, min_time=144, score=21140.260, used=19983, ignored=17)  ETA~0m55s
+   => count=20000  passes=0/3  [fail]
+-- count=10000 --
+   count=10000 trial=1: FAIL (exit 2, 11s, min_time=139, score=20375.467, used=9993, ignored=7)  ETA~0m36s
+   count=10000 trial=2: FAIL (exit 2, 11s, min_time=143, score=20323.436, used=9992, ignored=8)  ETA~0m18s
+   count=10000 trial=3: FAIL (exit 2, 12s, min_time=144, score=20214.660, used=9994, ignored=6)  ETA~0m0s
+   => count=10000  passes=0/3  [fail]
+
+== summary (count : passes/trials : verdict) ==
+   500000 : 3/3 : PASS
+   400000 : 3/3 : PASS
+   300000 : 2/3 : PASS
+   250000 : 3/3 : PASS
+   200000 : 1/3 : fail
+   150000 : 3/3 : PASS
+   100000 : 1/3 : fail
+   75000 : 0/3 : fail
+   60000 : 0/3 : fail
+   50000 : 0/3 : fail
+   45000 : 0/3 : fail
+   40000 : 0/3 : fail
+   35000 : 0/3 : fail
+   30000 : 0/3 : fail
+   25000 : 0/3 : fail
+   20000 : 0/3 : fail
+   10000 : 0/3 : fail
+
+THRESHOLD (lowest count still passing >= 2/3): 150000
+Full per-trial data: /Users/huan/AES-Research-C/experiments/count_threshold_results.csv
+Run metadata:        /Users/huan/AES-Research-C/experiments/count_threshold_meta.txt
+Done.

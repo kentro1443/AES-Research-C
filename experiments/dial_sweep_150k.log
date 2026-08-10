@@ -1,0 +1,102 @@
+== build ==
+make: Nothing to be done for `all'.
+== reusing existing fixed key /Users/huan/AES-Research-C/experiments/work/key.bin ==
+
+== dial sweep config ==
+fixed count=150000  trials=5  pass_min=3
+repeat sweep (evict=2048): 50 40 30 20 10
+evict  sweep (repeat=50): 2048 1024 512 256 128
+CSV -> /Users/huan/AES-Research-C/experiments/dial_sweep_150k_results.csv
+
+########## SWEEP 1: -repeat  (count=150000, evict-kb=2048 fixed) ##########
+-- repeat: count=150000 repeat=50 evict_kb=2048 --
+   trial 1/5: FAIL (exit 2, 147s, min_time=107, score=17634.188)
+   trial 2/5: PASS (exit 0, 142s, min_time=111, score=17520.145)
+   trial 3/5: PASS (exit 0, 143s, min_time=110, score=16886.864)
+   trial 4/5: FAIL (exit 2, 142s, min_time=117, score=18174.229)
+   trial 5/5: PASS (exit 0, 141s, min_time=107, score=16852.644)
+   => passes=3/5  [PASS]
+-- repeat: count=150000 repeat=40 evict_kb=2048 --
+   trial 1/5: PASS (exit 0, 117s, min_time=87, score=13569.193)
+   trial 2/5: PASS (exit 0, 117s, min_time=91, score=14097.283)
+   trial 3/5: PASS (exit 0, 117s, min_time=89, score=13482.546)
+   trial 4/5: PASS (exit 0, 117s, min_time=82, score=14034.371)
+   trial 5/5: FAIL (exit 2, 117s, min_time=92, score=14641.163)
+   => passes=4/5  [PASS]
+-- repeat: count=150000 repeat=30 evict_kb=2048 --
+   trial 1/5: PASS (exit 0, 92s, min_time=64, score=10504.775)
+   trial 2/5: PASS (exit 0, 93s, min_time=63, score=10241.515)
+   trial 3/5: PASS (exit 0, 92s, min_time=66, score=10179.594)
+   trial 4/5: PASS (exit 0, 92s, min_time=64, score=10249.183)
+   trial 5/5: FAIL (exit 2, 92s, min_time=63, score=10505.112)
+   => passes=4/5  [PASS]
+-- repeat: count=150000 repeat=20 evict_kb=2048 --
+   trial 1/5: FAIL (exit 2, 68s, min_time=43, score=7030.539)
+   trial 2/5: PASS (exit 0, 67s, min_time=43, score=6743.132)
+   trial 3/5: PASS (exit 0, 68s, min_time=43, score=6971.784)
+   trial 4/5: FAIL (exit 2, 67s, min_time=42, score=7382.062)
+   trial 5/5: PASS (exit 0, 68s, min_time=43, score=6784.162)
+   => passes=3/5  [PASS]
+-- repeat: count=150000 repeat=10 evict_kb=2048 --
+   trial 1/5: PASS (exit 0, 42s, min_time=20, score=3466.064)
+   trial 2/5: PASS (exit 0, 43s, min_time=20, score=3493.808)
+   trial 3/5: PASS (exit 0, 43s, min_time=20, score=3341.859)
+   trial 4/5: FAIL (exit 2, 42s, min_time=19, score=3496.051)
+   trial 5/5: PASS (exit 0, 43s, min_time=20, score=3459.510)
+   => passes=4/5  [PASS]
+
+########## SWEEP 2: -evict-kb  (count=150000, repeat=50 fixed) ##########
+-- evict: count=150000 repeat=50 evict_kb=2048 --
+   trial 1/5: PASS (exit 0, 142s, min_time=109, score=17566.840)
+   trial 2/5: PASS (exit 0, 141s, min_time=109, score=17481.372)
+   trial 3/5: PASS (exit 0, 142s, min_time=109, score=17620.514)
+   trial 4/5: PASS (exit 0, 142s, min_time=111, score=16903.180)
+   trial 5/5: PASS (exit 0, 142s, min_time=114, score=17709.498)
+   => passes=5/5  [PASS]
+-- evict: count=150000 repeat=50 evict_kb=1024 --
+   trial 1/5: FAIL (exit 2, 80s, min_time=115, score=17832.863)
+   trial 2/5: FAIL (exit 2, 81s, min_time=111, score=17308.228)
+   trial 3/5: FAIL (exit 2, 80s, min_time=109, score=16204.206)
+   trial 4/5: FAIL (exit 2, 81s, min_time=111, score=16331.997)
+   trial 5/5: FAIL (exit 2, 81s, min_time=107, score=16237.918)
+   => passes=0/5  [fail]
+-- evict: count=150000 repeat=50 evict_kb=512 --
+   trial 1/5: PASS (exit 0, 49s, min_time=113, score=16928.378)
+   trial 2/5: PASS (exit 0, 50s, min_time=108, score=15919.937)
+   trial 3/5: FAIL (exit 2, 50s, min_time=109, score=16085.940)
+   trial 4/5: PASS (exit 0, 49s, min_time=113, score=16844.823)
+   trial 5/5: PASS (exit 0, 50s, min_time=107, score=16916.812)
+   => passes=4/5  [PASS]
+-- evict: count=150000 repeat=50 evict_kb=256 --
+   trial 1/5: FAIL (exit 2, 34s, min_time=114, score=17729.942)
+   trial 2/5: PASS (exit 0, 33s, min_time=96, score=14621.374)
+   trial 3/5: PASS (exit 0, 34s, min_time=103, score=15699.785)
+   trial 4/5: PASS (exit 0, 33s, min_time=100, score=15133.802)
+   trial 5/5: PASS (exit 0, 34s, min_time=103, score=15889.717)
+   => passes=4/5  [PASS]
+-- evict: count=150000 repeat=50 evict_kb=128 --
+   trial 1/5: PASS (exit 0, 23s, min_time=100, score=14842.334)
+   trial 2/5: PASS (exit 0, 24s, min_time=95, score=14189.651)
+   trial 3/5: PASS (exit 0, 24s, min_time=96, score=14531.468)
+   trial 4/5: PASS (exit 0, 23s, min_time=100, score=15172.043)
+   trial 5/5: PASS (exit 0, 24s, min_time=99, score=15045.398)
+   => passes=5/5  [PASS]
+
+== summary: -repeat sweep (count=150000, evict=2048) ==
+   repeat : passes/trials : verdict
+   50 : 3/5 : PASS
+   40 : 4/5 : PASS
+   30 : 4/5 : PASS
+   20 : 3/5 : PASS
+   10 : 4/5 : PASS
+
+== summary: -evict-kb sweep (count=150000, repeat=50) ==
+   evict_kb : passes/trials : verdict
+   2048 : 5/5 : PASS
+   1024 : 0/5 : fail
+   512 : 4/5 : PASS
+   256 : 4/5 : PASS
+   128 : 5/5 : PASS
+
+Full per-trial data: /Users/huan/AES-Research-C/experiments/dial_sweep_150k_results.csv
+Done.

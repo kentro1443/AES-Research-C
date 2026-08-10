@@ -1,0 +1,62 @@
+% ---------------------------------------------------------------------------
+% paper_supplement.tex -- self-contained, compilable document that assembles the
+% new Methodology / Results / Analysis sections with their figures, so the work
+% can be read as one PDF.
+%
+% Build (from the paper/ directory):
+%     pdflatex paper_supplement.tex
+%     pdflatex paper_supplement.tex      % second pass resolves \ref cross-refs
+%
+% Figures live in ../experiments/plots/ (set via \graphicspath below). They are
+% PNGs, which pdflatex embeds directly.
+%
+% This is a *reading/preview* wrapper. To fold the content into the main paper,
+% \input the three fragment files directly and delete this wrapper's preamble.
+% ---------------------------------------------------------------------------
+\documentclass[11pt]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage[hidelinks]{hyperref}
+
+% Figures are one directory up, under experiments/plots/.
+\graphicspath{{../experiments/plots/}}
+
+% Absorb the few points-too-wide lines (long \texttt{} tokens) without rewording.
+\emergencystretch=3em
+
+\title{AES Cache-Timing Laboratory:\\
+       Trace-Threshold, Cross-Language, and Dial-Sweep Results\\
+       \large(supplement to draft~1 --- Results and Analysis)}
+\author{}
+\date{}
+
+\begin{document}
+\maketitle
+
+\noindent\emph{This supplement extends the draft (Introduction + Methodology)
+with the experiments actually run: the C trace-count threshold, the native
+cross-language recovery comparison (C vs.\ Go), the Go garbage-collector
+ablation, and the dial sweep. Numbering here is local to the supplement; when
+merged into the main paper the section/figure/table numbers will renumber
+automatically.}
+
+\bigskip
+
+% --- Methodology additions (subsections; attach under the main Section 2) ------
+% Numbered \section so the \subsection fragments render as 1.1, 1.2, ... rather
+% than 0.1 under an unnumbered heading.
+\section{Methodology additions}
+\input{methodology_additions.tex}
+
+% --- Results ------------------------------------------------------------------
+\input{results.tex}
+
+% --- Analysis -----------------------------------------------------------------
+\input{analysis.tex}
+
+\end{document}

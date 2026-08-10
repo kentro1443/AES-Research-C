@@ -1,0 +1,377 @@
+== build ==
+make: Nothing to be done for `all'.
+== reusing existing fixed key /Users/huan/AES-Research-C/experiments/work/key.bin ==
+
+== sweep config ==
+repeat=50  evict_kb=2048  trials=10  pass_min=2  interleave=1  seed=23394
+counts: 500000 400000 300000 250000 200000 150000 100000 75000 60000 50000 45000 40000 35000 30000 25000 20000 10000
+planned total sample-units: 22900000 (ETA refines after the first run)
+
+CSV  -> /Users/huan/AES-Research-C/experiments/count_threshold_10x_results.csv
+META -> /Users/huan/AES-Research-C/experiments/count_threshold_10x_meta.txt
+
+== interleaved run order (seed=23394) ==
+-- run 1/170 : count=40000 trial=9 --
+   count=40000 trial=9: FAIL (exit 2, 38s, min_time=107, score=17475.772, used=39927, ignored=73)  ETA~361m57s
+-- run 2/170 : count=50000 trial=7 --
+   count=50000 trial=7: FAIL (exit 2, 47s, min_time=111, score=17994.624, used=49749, ignored=251)  ETA~359m2s
+-- run 3/170 : count=20000 trial=3 --
+   count=20000 trial=3: FAIL (exit 2, 19s, min_time=114, score=17085.830, used=19974, ignored=26)  ETA~359m6s
+-- run 4/170 : count=300000 trial=2 --
+   count=300000 trial=2: PASS (exit 0, 282s, min_time=115, score=17869.789, used=299355, ignored=645)  ETA~352m53s
+-- run 5/170 : count=35000 trial=2 --
+   count=35000 trial=2: FAIL (exit 2, 33s, min_time=116, score=17554.547, used=34961, ignored=39)  ETA~352m23s
+-- run 6/170 : count=150000 trial=4 --
+   count=150000 trial=4: PASS (exit 0, 142s, min_time=116, score=17093.802, used=149730, ignored=270)  ETA~350m30s
+-- run 7/170 : count=400000 trial=9 --
+   count=400000 trial=9: FAIL (exit 2, 2202s, min_time=105, score=20033.797, used=387569, ignored=12431)  ETA~1013m47s
+-- run 8/170 : count=500000 trial=5 --
+   count=500000 trial=5: PASS (exit 0, 574s, min_time=129, score=21480.689, used=498363, ignored=1637)  ETA~796m18s
+-- run 9/170 : count=300000 trial=10 --
+   count=300000 trial=10: PASS (exit 0, 3291s, min_time=133, score=22357.476, used=297142, ignored=2858)  ETA~1298m49s
+-- run 10/170 : count=30000 trial=4 --
+   count=30000 trial=4: FAIL (exit 2, 34s, min_time=144, score=21721.300, used=29819, ignored=181)  ETA~1282m12s
+-- run 11/170 : count=20000 trial=5 --
+   count=20000 trial=5: FAIL (exit 2, 22s, min_time=128, score=20855.713, used=19963, ignored=37)  ETA~1271m17s
+-- run 12/170 : count=200000 trial=4 --
+   count=200000 trial=4: FAIL (exit 2, 1152s, min_time=141, score=21430.289, used=199522, ignored=478)  ETA~1331m51s
+-- run 13/170 : count=150000 trial=7 --
+   count=150000 trial=7: FAIL (exit 2, 170s, min_time=140, score=21484.144, used=149839, ignored=161)  ETA~1258m39s
+-- run 14/170 : count=500000 trial=3 --
+   count=500000 trial=3: FAIL (exit 2, 566s, min_time=144, score=22952.175, used=499269, ignored=731)  ETA~1071m6s
+-- run 15/170 : count=250000 trial=1 --
+   count=250000 trial=1: PASS (exit 0, 283s, min_time=144, score=21395.477, used=249693, ignored=307)  ETA~1000m0s
+-- run 16/170 : count=75000 trial=5 --
+   count=75000 trial=5: FAIL (exit 2, 85s, min_time=141, score=20637.507, used=74940, ignored=60)  ETA~980m50s
+-- run 17/170 : count=20000 trial=4 --
+   count=20000 trial=4: FAIL (exit 2, 23s, min_time=141, score=21380.975, used=19983, ignored=17)  ETA~975m54s
+-- run 18/170 : count=40000 trial=10 --
+   count=40000 trial=10: FAIL (exit 2, 46s, min_time=147, score=21547.947, used=39941, ignored=59)  ETA~966m13s
+-- run 19/170 : count=35000 trial=5 --
+   count=35000 trial=5: FAIL (exit 2, 40s, min_time=157, score=23299.259, used=34894, ignored=106)  ETA~957m54s
+-- run 20/170 : count=45000 trial=9 --
+   count=45000 trial=9: FAIL (exit 2, 51s, min_time=143, score=21334.247, used=44962, ignored=38)  ETA~947m26s
+-- run 21/170 : count=50000 trial=9 --
+   count=50000 trial=9: FAIL (exit 2, 57s, min_time=146, score=21317.180, used=49954, ignored=46)  ETA~936m8s
+-- run 22/170 : count=75000 trial=10 --
+   count=75000 trial=10: FAIL (exit 2, 86s, min_time=147, score=22006.238, used=74887, ignored=113)  ETA~919m50s
+-- run 23/170 : count=60000 trial=1 --
+   count=60000 trial=1: FAIL (exit 2, 68s, min_time=138, score=21430.789, used=59915, ignored=85)  ETA~907m12s
+-- run 24/170 : count=30000 trial=5 --
+   count=30000 trial=5: FAIL (exit 2, 34s, min_time=144, score=20965.960, used=29966, ignored=34)  ETA~901m2s
+-- run 25/170 : count=150000 trial=8 --
+   count=150000 trial=8: FAIL (exit 2, 170s, min_time=145, score=22214.894, used=149837, ignored=163)  ETA~871m38s
+-- run 26/170 : count=100000 trial=2 --
+   count=100000 trial=2: FAIL (exit 2, 114s, min_time=137, score=20572.277, used=99868, ignored=132)  ETA~853m19s
+-- run 27/170 : count=400000 trial=2 --
+   count=400000 trial=2: PASS (exit 0, 452s, min_time=136, score=21239.244, used=399466, ignored=534)  ETA~787m54s
+-- run 28/170 : count=20000 trial=1 --
+   count=20000 trial=1: FAIL (exit 2, 23s, min_time=136, score=20200.305, used=19980, ignored=20)  ETA~784m57s
+-- run 29/170 : count=25000 trial=1 --
+   count=25000 trial=1: FAIL (exit 2, 28s, min_time=149, score=21374.421, used=24987, ignored=13)  ETA~781m16s
+-- run 30/170 : count=200000 trial=6 --
+   count=200000 trial=6: PASS (exit 0, 227s, min_time=137, score=20675.360, used=199757, ignored=243)  ETA~753m16s
+-- run 31/170 : count=250000 trial=9 --
+   count=250000 trial=9: PASS (exit 0, 284s, min_time=137, score=20503.003, used=249575, ignored=425)  ETA~721m18s
+-- run 32/170 : count=30000 trial=10 --
+   count=30000 trial=10: FAIL (exit 2, 34s, min_time=142, score=21479.456, used=29968, ignored=32)  ETA~717m39s
+-- run 33/170 : count=40000 trial=2 --
+   count=40000 trial=2: FAIL (exit 2, 45s, min_time=143, score=21475.818, used=39961, ignored=39)  ETA~712m51s
+-- run 34/170 : count=250000 trial=4 --
+   count=250000 trial=4: PASS (exit 0, 283s, min_time=125, score=20568.523, used=249510, ignored=490)  ETA~684m24s
+-- run 35/170 : count=45000 trial=7 --
+   count=45000 trial=7: FAIL (exit 2, 51s, min_time=140, score=20404.221, used=44963, ignored=37)  ETA~679m32s
+-- run 36/170 : count=20000 trial=10 --
+   count=20000 trial=10: FAIL (exit 2, 23s, min_time=135, score=20295.148, used=19985, ignored=15)  ETA~677m25s
+-- run 37/170 : count=100000 trial=6 --
+   count=100000 trial=6: FAIL (exit 2, 113s, min_time=141, score=21575.129, used=99865, ignored=135)  ETA~666m56s
+-- run 38/170 : count=50000 trial=10 --
+   count=50000 trial=10: FAIL (exit 2, 57s, min_time=147, score=21432.024, used=49958, ignored=42)  ETA~661m50s
+-- run 39/170 : count=25000 trial=8 --
+   count=25000 trial=8: FAIL (exit 2, 29s, min_time=141, score=20685.684, used=24948, ignored=52)  ETA~659m21s
+-- run 40/170 : count=300000 trial=6 --
+   count=300000 trial=6: PASS (exit 0, 339s, min_time=134, score=20813.948, used=299635, ignored=365)  ETA~630m30s
+-- run 41/170 : count=50000 trial=3 --
+   count=50000 trial=3: FAIL (exit 2, 57s, min_time=146, score=21814.400, used=49971, ignored=29)  ETA~625m58s
+-- run 42/170 : count=45000 trial=5 --
+   count=45000 trial=5: FAIL (exit 2, 52s, min_time=150, score=21814.594, used=44945, ignored=55)  ETA~621m59s
+-- run 43/170 : count=500000 trial=1 --
+   count=500000 trial=1: PASS (exit 0, 566s, min_time=141, score=21412.134, used=499469, ignored=531)  ETA~580m18s
+-- run 44/170 : count=100000 trial=4 --
+   count=100000 trial=4: FAIL (exit 2, 114s, min_time=140, score=20963.703, used=99878, ignored=122)  ETA~572m39s
+-- run 45/170 : count=40000 trial=8 --
+   count=40000 trial=8: FAIL (exit 2, 45s, min_time=146, score=21508.449, used=39962, ignored=38)  ETA~569m36s
+-- run 46/170 : count=10000 trial=1 --
+   count=10000 trial=1: FAIL (exit 2, 12s, min_time=149, score=21383.527, used=9995, ignored=5)  ETA~568m53s
+-- run 47/170 : count=30000 trial=3 --
+   count=30000 trial=3: FAIL (exit 2, 34s, min_time=140, score=20399.849, used=29955, ignored=45)  ETA~566m38s
+-- run 48/170 : count=400000 trial=5 --
+   count=400000 trial=5: PASS (exit 0, 456s, min_time=127, score=20457.353, used=398156, ignored=1844)  ETA~538m18s
+-- run 49/170 : count=35000 trial=3 --
+   count=35000 trial=3: FAIL (exit 2, 40s, min_time=136, score=20302.145, used=34963, ignored=37)  ETA~535m57s
+-- run 50/170 : count=150000 trial=2 --
+   count=150000 trial=2: PASS (exit 0, 170s, min_time=137, score=20461.991, used=149858, ignored=142)  ETA~525m59s
+-- run 51/170 : count=400000 trial=10 --
+   count=400000 trial=10: PASS (exit 0, 455s, min_time=135, score=20643.612, used=399037, ignored=963)  ETA~500m58s
+-- run 52/170 : count=10000 trial=2 --
+   count=10000 trial=2: FAIL (exit 2, 11s, min_time=143, score=20265.294, used=9993, ignored=7)  ETA~500m21s
+-- run 53/170 : count=500000 trial=9 --
+   count=500000 trial=9: PASS (exit 0, 567s, min_time=143, score=21451.595, used=499486, ignored=514)  ETA~471m39s
+-- run 54/170 : count=400000 trial=4 --
+   count=400000 trial=4: PASS (exit 0, 453s, min_time=138, score=21393.240, used=399455, ignored=545)  ETA~450m23s
+-- run 55/170 : count=40000 trial=7 --
+   count=40000 trial=7: FAIL (exit 2, 45s, min_time=149, score=21361.807, used=39978, ignored=22)  ETA~448m19s
+-- run 56/170 : count=500000 trial=10 --
+   count=500000 trial=10: PASS (exit 0, 575s, min_time=131, score=20582.795, used=499074, ignored=926)  ETA~423m56s
+-- run 57/170 : count=200000 trial=10 --
+   count=200000 trial=10: FAIL (exit 2, 227s, min_time=137, score=20487.539, used=199771, ignored=229)  ETA~414m34s
+-- run 58/170 : count=60000 trial=6 --
+   count=60000 trial=6: PASS (exit 0, 68s, min_time=145, score=21277.878, used=59951, ignored=49)  ETA~411m48s
+-- run 59/170 : count=60000 trial=3 --
+   count=60000 trial=3: FAIL (exit 2, 69s, min_time=140, score=21283.938, used=59896, ignored=104)  ETA~409m6s
+-- run 60/170 : count=30000 trial=2 --
+   count=30000 trial=2: FAIL (exit 2, 34s, min_time=146, score=21517.458, used=29958, ignored=42)  ETA~407m44s
+-- run 61/170 : count=10000 trial=7 --
+   count=10000 trial=7: FAIL (exit 2, 11s, min_time=150, score=21187.006, used=9994, ignored=6)  ETA~407m16s
+-- run 62/170 : count=75000 trial=7 --
+   count=75000 trial=7: FAIL (exit 2, 85s, min_time=144, score=21350.104, used=74954, ignored=46)  ETA~403m53s
+-- run 63/170 : count=10000 trial=4 --
+   count=10000 trial=4: FAIL (exit 2, 11s, min_time=152, score=21321.321, used=9998, ignored=2)  ETA~403m26s
+-- run 64/170 : count=400000 trial=3 --
+   count=400000 trial=3: PASS (exit 0, 454s, min_time=137, score=21361.089, used=399380, ignored=620)  ETA~385m59s
+-- run 65/170 : count=20000 trial=2 --
+   count=20000 trial=2: FAIL (exit 2, 23s, min_time=148, score=21387.776, used=19988, ignored=12)  ETA~385m8s
+-- run 66/170 : count=40000 trial=5 --
+   count=40000 trial=5: FAIL (exit 2, 45s, min_time=141, score=20489.254, used=39957, ignored=43)  ETA~383m26s
+-- run 67/170 : count=250000 trial=8 --
+   count=250000 trial=8: PASS (exit 0, 284s, min_time=141, score=21679.991, used=249641, ignored=359)  ETA~373m1s
+-- run 68/170 : count=25000 trial=10 --
+   count=25000 trial=10: FAIL (exit 2, 28s, min_time=140, score=20575.319, used=24987, ignored=13)  ETA~371m59s
+-- run 69/170 : count=100000 trial=1 --
+   count=100000 trial=1: PASS (exit 0, 113s, min_time=137, score=20346.893, used=99900, ignored=100)  ETA~367m54s
+-- run 70/170 : count=200000 trial=9 --
+   count=200000 trial=9: FAIL (exit 2, 227s, min_time=144, score=22130.631, used=199582, ignored=418)  ETA~359m53s
+-- run 71/170 : count=75000 trial=8 --
+   count=75000 trial=8: FAIL (exit 2, 85s, min_time=140, score=21098.525, used=74929, ignored=71)  ETA~356m55s
+-- run 72/170 : count=35000 trial=10 --
+   count=35000 trial=10: FAIL (exit 2, 40s, min_time=138, score=21112.563, used=34957, ignored=43)  ETA~355m32s
+-- run 73/170 : count=30000 trial=7 --
+   count=30000 trial=7: FAIL (exit 2, 34s, min_time=148, score=21503.783, used=29985, ignored=15)  ETA~354m22s
+-- run 74/170 : count=250000 trial=5 --
+   count=250000 trial=5: PASS (exit 0, 283s, min_time=137, score=20533.549, used=249705, ignored=295)  ETA~344m41s
+-- run 75/170 : count=100000 trial=9 --
+   count=100000 trial=9: FAIL (exit 2, 114s, min_time=146, score=21593.386, used=99891, ignored=109)  ETA~340m54s
+-- run 76/170 : count=20000 trial=8 --
+   count=20000 trial=8: FAIL (exit 2, 23s, min_time=141, score=20572.309, used=19985, ignored=15)  ETA~340m9s
+-- run 77/170 : count=100000 trial=3 --
+   count=100000 trial=3: PASS (exit 0, 113s, min_time=145, score=21491.043, used=99921, ignored=79)  ETA~336m23s
+-- run 78/170 : count=200000 trial=5 --
+   count=200000 trial=5: PASS (exit 0, 226s, min_time=132, score=20052.302, used=199768, ignored=232)  ETA~328m57s
+-- run 79/170 : count=50000 trial=1 --
+   count=50000 trial=1: FAIL (exit 2, 57s, min_time=146, score=21421.392, used=49975, ignored=25)  ETA~327m8s
+-- run 80/170 : count=10000 trial=9 --
+   count=10000 trial=9: FAIL (exit 2, 11s, min_time=149, score=21769.137, used=9976, ignored=24)  ETA~326m46s
+-- run 81/170 : count=150000 trial=3 --
+   count=150000 trial=3: PASS (exit 0, 170s, min_time=133, score=21481.583, used=149751, ignored=249)  ETA~321m19s
+-- run 82/170 : count=400000 trial=1 --
+   count=400000 trial=1: PASS (exit 0, 453s, min_time=139, score=21608.905, used=399533, ignored=467)  ETA~307m7s
+-- run 83/170 : count=10000 trial=6 --
+   count=10000 trial=6: FAIL (exit 2, 13s, min_time=122, score=17454.000, used=9986, ignored=14)  ETA~306m48s
+-- run 84/170 : count=60000 trial=4 --
+   count=60000 trial=4: FAIL (exit 2, 68s, min_time=145, score=21580.332, used=59918, ignored=82)  ETA~304m43s
+-- run 85/170 : count=250000 trial=3 --
+   count=250000 trial=3: PASS (exit 0, 284s, min_time=140, score=21663.657, used=249687, ignored=313)  ETA~296m8s
+-- run 86/170 : count=20000 trial=7 --
+   count=20000 trial=7: FAIL (exit 2, 23s, min_time=144, score=21371.163, used=19982, ignored=18)  ETA~295m27s
+-- run 87/170 : count=60000 trial=10 --
+   count=60000 trial=10: FAIL (exit 2, 68s, min_time=139, score=20617.822, used=59893, ignored=107)  ETA~293m25s
+-- run 88/170 : count=45000 trial=6 --
+   count=45000 trial=6: FAIL (exit 2, 51s, min_time=138, score=20398.034, used=44944, ignored=56)  ETA~291m54s
+-- run 89/170 : count=500000 trial=6 --
+   count=500000 trial=6: PASS (exit 0, 571s, min_time=137, score=21353.919, used=499345, ignored=655)  ETA~275m24s
+-- run 90/170 : count=100000 trial=7 --
+   count=100000 trial=7: FAIL (exit 2, 113s, min_time=135, score=20647.331, used=99881, ignored=119)  ETA~272m9s
+-- run 91/170 : count=40000 trial=1 --
+   count=40000 trial=1: FAIL (exit 2, 46s, min_time=138, score=21457.951, used=39967, ignored=33)  ETA~270m52s
+-- run 92/170 : count=35000 trial=8 --
+   count=35000 trial=8: FAIL (exit 2, 40s, min_time=146, score=21578.285, used=34940, ignored=60)  ETA~269m44s
+-- run 93/170 : count=250000 trial=7 --
+   count=250000 trial=7: PASS (exit 0, 286s, min_time=137, score=20722.275, used=249569, ignored=431)  ETA~261m47s
+-- run 94/170 : count=300000 trial=5 --
+   count=300000 trial=5: PASS (exit 0, 340s, min_time=140, score=21556.484, used=299639, ignored=361)  ETA~252m22s
+-- run 95/170 : count=25000 trial=3 --
+   count=25000 trial=3: FAIL (exit 2, 28s, min_time=146, score=21215.876, used=24986, ignored=14)  ETA~251m36s
+-- run 96/170 : count=400000 trial=7 --
+   count=400000 trial=7: PASS (exit 0, 454s, min_time=142, score=21418.407, used=399529, ignored=471)  ETA~239m19s
+-- run 97/170 : count=150000 trial=1 --
+   count=150000 trial=1: PASS (exit 0, 170s, min_time=144, score=21435.223, used=149846, ignored=154)  ETA~234m47s
+-- run 98/170 : count=40000 trial=6 --
+   count=40000 trial=6: FAIL (exit 2, 45s, min_time=138, score=20575.573, used=39953, ignored=47)  ETA~233m35s
+-- run 99/170 : count=200000 trial=8 --
+   count=200000 trial=8: PASS (exit 0, 1017s, min_time=119, score=21477.412, used=197574, ignored=2426)  ETA~236m1s
+-- run 100/170 : count=30000 trial=9 --
+   count=30000 trial=9: FAIL (exit 2, 949s, min_time=132, score=20528.686, used=29941, ignored=59)  ETA~244m46s
+-- run 101/170 : count=50000 trial=5 --
+   count=50000 trial=5: FAIL (exit 2, 58s, min_time=127, score=21692.099, used=49511, ignored=489)  ETA~243m8s
+-- run 102/170 : count=400000 trial=6 --
+   count=400000 trial=6: PASS (exit 0, 3920s, min_time=128, score=21949.986, used=397090, ignored=2910)  ETA~263m53s
+-- run 103/170 : count=75000 trial=1 --
+   count=75000 trial=1: FAIL (exit 2, 1011s, min_time=133, score=21731.132, used=74828, ignored=172)  ETA~269m53s
+-- run 104/170 : count=25000 trial=9 --
+   count=25000 trial=9: FAIL (exit 2, 29s, min_time=139, score=21299.780, used=24968, ignored=32)  ETA~268m54s
+-- run 105/170 : count=100000 trial=10 --
+   count=100000 trial=10: FAIL (exit 2, 1035s, min_time=130, score=20694.081, used=99732, ignored=268)  ETA~273m34s
+-- run 106/170 : count=250000 trial=6 --
+   count=250000 trial=6: PASS (exit 0, 2282s, min_time=122, score=21411.717, used=249296, ignored=704)  ETA~281m13s
+-- run 107/170 : count=45000 trial=10 --
+   count=45000 trial=10: FAIL (exit 2, 967s, min_time=132, score=20534.346, used=44932, ignored=68)  ETA~287m22s
+-- run 108/170 : count=50000 trial=4 --
+   count=50000 trial=4: FAIL (exit 2, 58s, min_time=130, score=21469.700, used=49818, ignored=182)  ETA~285m7s
+-- run 109/170 : count=45000 trial=2 --
+   count=45000 trial=2: FAIL (exit 2, 551s, min_time=133, score=20649.430, used=44889, ignored=111)  ETA~287m27s
+-- run 110/170 : count=35000 trial=7 --
+   count=35000 trial=7: FAIL (exit 2, 39s, min_time=143, score=21500.354, used=34947, ignored=53)  ETA~285m50s
+-- run 111/170 : count=25000 trial=5 --
+   count=25000 trial=5: FAIL (exit 2, 29s, min_time=127, score=20013.176, used=24959, ignored=41)  ETA~284m42s
+-- run 112/170 : count=75000 trial=3 --
+   count=75000 trial=3: FAIL (exit 2, 1042s, min_time=133, score=21764.347, used=74575, ignored=425)  ETA~289m24s
+-- run 113/170 : count=60000 trial=5 --
+   count=60000 trial=5: FAIL (exit 2, 1030s, min_time=138, score=21571.327, used=59838, ignored=162)  ETA~294m39s
+-- run 114/170 : count=35000 trial=9 --
+   count=35000 trial=9: FAIL (exit 2, 40s, min_time=128, score=20377.361, used=34945, ignored=55)  ETA~292m58s
+-- run 115/170 : count=300000 trial=7 --
+   count=300000 trial=7: FAIL (exit 2, 2432s, min_time=106, score=19846.867, used=296240, ignored=3760)  ETA~295m5s
+-- run 116/170 : count=25000 trial=4 --
+   count=25000 trial=4: FAIL (exit 2, 24s, min_time=108, score=16910.483, used=24968, ignored=32)  ETA~293m47s
+-- run 117/170 : count=45000 trial=1 --
+   count=45000 trial=1: FAIL (exit 2, 42s, min_time=112, score=16861.307, used=44940, ignored=60)  ETA~291m28s
+-- run 118/170 : count=30000 trial=8 --
+   count=30000 trial=8: FAIL (exit 2, 28s, min_time=113, score=16969.913, used=29960, ignored=40)  ETA~289m55s
+-- run 119/170 : count=75000 trial=2 --
+   count=75000 trial=2: FAIL (exit 2, 71s, min_time=113, score=17715.025, used=74854, ignored=146)  ETA~286m4s
+-- run 120/170 : count=60000 trial=7 --
+   count=60000 trial=7: FAIL (exit 2, 56s, min_time=111, score=17019.920, used=59785, ignored=215)  ETA~283m1s
+-- run 121/170 : count=25000 trial=2 --
+   count=25000 trial=2: FAIL (exit 2, 24s, min_time=118, score=17882.356, used=24932, ignored=68)  ETA~281m45s
+-- run 122/170 : count=100000 trial=8 --
+   count=100000 trial=8: PASS (exit 0, 94s, min_time=109, score=17701.715, used=99843, ignored=157)  ETA~276m42s
+-- run 123/170 : count=60000 trial=8 --
+   count=60000 trial=8: FAIL (exit 2, 56s, min_time=110, score=17774.602, used=59913, ignored=87)  ETA~273m42s
+-- run 124/170 : count=300000 trial=8 --
+   count=300000 trial=8: PASS (exit 0, 1214s, min_time=103, score=17917.832, used=298509, ignored=1491)  ETA~265m11s
+-- run 125/170 : count=50000 trial=2 --
+   count=50000 trial=2: FAIL (exit 2, 589s, min_time=122, score=20523.306, used=48972, ignored=1028)  ETA~266m19s
+-- run 126/170 : count=50000 trial=6 --
+   count=50000 trial=6: FAIL (exit 2, 1126s, min_time=135, score=20723.050, used=49794, ignored=206)  ETA~270m55s
+-- run 127/170 : count=60000 trial=9 --
+   count=60000 trial=9: FAIL (exit 2, 69s, min_time=139, score=21961.623, used=59876, ignored=124)  ETA~267m53s
+-- run 128/170 : count=250000 trial=2 --
+   count=250000 trial=2: PASS (exit 0, 418s, min_time=110, score=17883.021, used=248849, ignored=1151)  ETA~256m14s
+-- run 129/170 : count=35000 trial=1 --
+   count=35000 trial=1: FAIL (exit 2, 34s, min_time=113, score=17050.655, used=34951, ignored=49)  ETA~254m27s
+-- run 130/170 : count=200000 trial=3 --
+   count=200000 trial=3: PASS (exit 0, 188s, min_time=113, score=17452.292, used=199703, ignored=297)  ETA~244m23s
+-- run 131/170 : count=75000 trial=9 --
+   count=75000 trial=9: PASS (exit 0, 71s, min_time=115, score=17976.117, used=74853, ignored=147)  ETA~240m40s
+-- run 132/170 : count=35000 trial=4 --
+   count=35000 trial=4: FAIL (exit 2, 33s, min_time=110, score=17110.450, used=34954, ignored=46)  ETA~238m56s
+-- run 133/170 : count=100000 trial=5 --
+   count=100000 trial=5: FAIL (exit 2, 95s, min_time=112, score=17109.396, used=99815, ignored=185)  ETA~234m0s
+-- run 134/170 : count=200000 trial=7 --
+   count=200000 trial=7: PASS (exit 0, 2073s, min_time=107, score=20708.569, used=197067, ignored=2933)  ETA~234m19s
+-- run 135/170 : count=300000 trial=3 --
+   count=300000 trial=3: PASS (exit 0, 2880s, min_time=129, score=21598.048, used=298759, ignored=1241)  ETA~232m9s
+-- run 136/170 : count=45000 trial=8 --
+   count=45000 trial=8: FAIL (exit 2, 52s, min_time=133, score=20370.686, used=44881, ignored=119)  ETA~229m50s
+-- run 137/170 : count=150000 trial=6 --
+   count=150000 trial=6: FAIL (exit 2, 1966s, min_time=128, score=21725.897, used=149096, ignored=904)  ETA~230m37s
+-- run 138/170 : count=500000 trial=4 --
+   count=500000 trial=4: PASS (exit 0, 2383s, min_time=104, score=17822.707, used=496399, ignored=3601)  ETA~212m0s
+-- run 139/170 : count=25000 trial=6 --
+   count=25000 trial=6: FAIL (exit 2, 23s, min_time=115, score=17891.577, used=24987, ignored=13)  ETA~210m39s
+-- run 140/170 : count=250000 trial=10 --
+   count=250000 trial=10: PASS (exit 0, 236s, min_time=113, score=16936.729, used=249819, ignored=181)  ETA~197m15s
+-- run 141/170 : count=500000 trial=8 --
+   count=500000 trial=8: PASS (exit 0, 5375s, min_time=102, score=20514.817, used=482241, ignored=17759)  ETA~187m22s
+-- run 142/170 : count=200000 trial=2 --
+   count=200000 trial=2: PASS (exit 0, 1683s, min_time=132, score=21934.698, used=197897, ignored=2103)  ETA~180m49s
+-- run 143/170 : count=150000 trial=10 --
+   count=150000 trial=10: FAIL (exit 2, 1448s, min_time=107, score=20927.014, used=145783, ignored=4217)  ETA~176m9s
+-- run 144/170 : count=40000 trial=3 --
+   count=40000 trial=3: FAIL (exit 2, 1066s, min_time=114, score=20382.857, used=38985, ignored=1015)  ETA~176m50s
+-- run 145/170 : count=75000 trial=4 --
+   count=75000 trial=4: FAIL (exit 2, 1037s, min_time=108, score=19290.444, used=73152, ignored=1848)  ETA~175m11s
+-- run 146/170 : count=300000 trial=9 --
+   count=300000 trial=9: PASS (exit 0, 3261s, min_time=128, score=21783.558, used=297591, ignored=2409)  ETA~165m10s
+-- run 147/170 : count=150000 trial=5 --
+   count=150000 trial=5: FAIL (exit 2, 1099s, min_time=106, score=20463.385, used=145936, ignored=4064)  ETA~158m23s
+-- run 148/170 : count=10000 trial=8 --
+   count=10000 trial=8: FAIL (exit 2, 9s, min_time=112, score=17570.227, used=9981, ignored=19)  ETA~157m47s
+-- run 149/170 : count=45000 trial=4 --
+   count=45000 trial=4: FAIL (exit 2, 42s, min_time=116, score=17690.275, used=44918, ignored=82)  ETA~155m2s
+-- run 150/170 : count=500000 trial=7 --
+   count=500000 trial=7: PASS (exit 0, 471s, min_time=113, score=17927.068, used=499211, ignored=789)  ETA~125m14s
+-- run 151/170 : count=500000 trial=2 --
+   count=500000 trial=2: PASS (exit 0, 3378s, min_time=103, score=20436.496, used=487636, ignored=12364)  ETA~100m38s
+-- run 152/170 : count=400000 trial=8 --
+   count=400000 trial=8: FAIL (exit 2, 1914s, min_time=104, score=17897.024, used=396645, ignored=3355)  ETA~79m2s
+-- run 153/170 : count=10000 trial=3 --
+   count=10000 trial=3: FAIL (exit 2, 9s, min_time=120, score=17043.075, used=9991, ignored=9)  ETA~78m26s
+-- run 154/170 : count=25000 trial=7 --
+   count=25000 trial=7: FAIL (exit 2, 23s, min_time=115, score=17272.498, used=24946, ignored=54)  ETA~76m58s
+-- run 155/170 : count=60000 trial=2 --
+   count=60000 trial=2: FAIL (exit 2, 57s, min_time=118, score=17797.554, used=59881, ignored=119)  ETA~73m28s
+-- run 156/170 : count=75000 trial=6 --
+   count=75000 trial=6: FAIL (exit 2, 71s, min_time=111, score=17038.574, used=74860, ignored=140)  ETA~69m6s
+-- run 157/170 : count=30000 trial=1 --
+   count=30000 trial=1: FAIL (exit 2, 29s, min_time=117, score=17025.303, used=29963, ignored=37)  ETA~67m22s
+-- run 158/170 : count=150000 trial=9 --
+   count=150000 trial=9: PASS (exit 0, 141s, min_time=117, score=17790.327, used=149794, ignored=206)  ETA~58m43s
+-- run 159/170 : count=45000 trial=3 --
+   count=45000 trial=3: FAIL (exit 2, 128s, min_time=107, score=17460.607, used=44771, ignored=229)  ETA~56m13s
+-- run 160/170 : count=20000 trial=9 --
+   count=20000 trial=9: FAIL (exit 2, 23s, min_time=143, score=21186.462, used=19903, ignored=97)  ETA~55m4s
+-- run 161/170 : count=30000 trial=6 --
+   count=30000 trial=6: FAIL (exit 2, 39s, min_time=148, score=21919.800, used=29869, ignored=131)  ETA~53m22s
+-- run 162/170 : count=200000 trial=1 --
+   count=200000 trial=1: FAIL (exit 2, 1291s, min_time=108, score=18059.149, used=195965, ignored=4035)  ETA~42m40s
+-- run 163/170 : count=35000 trial=6 --
+   count=35000 trial=6: FAIL (exit 2, 33s, min_time=117, score=17657.803, used=34896, ignored=104)  ETA~40m40s
+-- run 164/170 : count=40000 trial=4 --
+   count=40000 trial=4: FAIL (exit 2, 38s, min_time=116, score=16953.287, used=39940, ignored=60)  ETA~38m23s
+-- run 165/170 : count=10000 trial=10 --
+   count=10000 trial=10: FAIL (exit 2, 10s, min_time=120, score=17151.901, used=9987, ignored=13)  ETA~37m49s
+-- run 166/170 : count=300000 trial=4 --
+   count=300000 trial=4: PASS (exit 0, 282s, min_time=114, score=17209.501, used=299566, ignored=434)  ETA~20m56s
+-- run 167/170 : count=50000 trial=8 --
+   count=50000 trial=8: FAIL (exit 2, 47s, min_time=114, score=17008.140, used=49954, ignored=46)  ETA~18m9s
+-- run 168/170 : count=300000 trial=1 --
+   count=300000 trial=1: PASS (exit 0, 282s, min_time=115, score=17603.592, used=299682, ignored=318)  ETA~1m38s
+-- run 169/170 : count=10000 trial=5 --
+   count=10000 trial=5: FAIL (exit 2, 10s, min_time=124, score=17877.336, used=9985, ignored=15)  ETA~1m5s
+-- run 170/170 : count=20000 trial=6 --
+   count=20000 trial=6: FAIL (exit 2, 19s, min_time=116, score=17912.665, used=19978, ignored=22)  ETA~0m0s
+
+== summary (count : passes/trials : verdict) ==
+   500000 : 9/10 : PASS
+   400000 : 8/10 : PASS
+   300000 : 9/10 : PASS
+   250000 : 10/10 : PASS
+   200000 : 6/10 : PASS
+   150000 : 5/10 : PASS
+   100000 : 3/10 : PASS
+   75000 : 1/10 : fail
+   60000 : 1/10 : fail
+   50000 : 0/10 : fail
+   45000 : 0/10 : fail
+   40000 : 0/10 : fail
+   35000 : 0/10 : fail
+   30000 : 0/10 : fail
+   25000 : 0/10 : fail
+   20000 : 0/10 : fail
+   10000 : 0/10 : fail
+
+THRESHOLD (lowest count still passing >= 2/10): 100000
+Full per-trial data: /Users/huan/AES-Research-C/experiments/count_threshold_10x_results.csv
+Run metadata:        /Users/huan/AES-Research-C/experiments/count_threshold_10x_meta.txt
+Done.

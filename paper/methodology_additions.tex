@@ -1,0 +1,87 @@
+% Methodology additions -- drop-in fragment for the paper.
+% Requires: \usepackage{booktabs}. Slots after the existing Section 2.
+% These subsections extend the draft's Methodology to cover the experiments
+% that were actually run (dial sweep, native cross-language collection, and the
+% garbage-collector ablation) and record the dataset-governance rules.
+
+\subsection{Dial Sweep at a Fixed Trace Count}
+\label{sec:method-dial}
+The threshold experiment varies trace count while holding the two collection
+``dials'' fixed. A complementary experiment holds trace count fixed and varies
+the dials, to separate the contribution of \emph{averaging} from that of
+\emph{signal strength}:
+\begin{itemize}
+  \item \texttt{-repeat} $r$: the number of vulnerable encryptions accumulated
+        into one trace. Larger $r$ raises the target operation's contribution
+        relative to fixed timer overhead (more averaging per trace).
+  \item \texttt{-evict-kb} $e$: the size of the memory region read before each
+        timed operation. Larger $e$ disturbs more of the cache and is expected
+        to strengthen the collision signal.
+\end{itemize}
+The count is fixed at \textbf{100{,}000 traces}. This value is chosen
+deliberately: it sits in the C attack's \emph{marginal} region, just above its
+50\% threshold (Section~\ref{sec:results-threshold}), where recovery is most
+sensitive to changes in signal quality. A count deep in the reliable regime
+(where recovery is already~100\%) or deep in the failure regime (0\%) would
+mask any dial effect; the knee maximises the visible dynamic range. We sweep
+$r \in \{10,20,30,50,75,100\}$ and $e \in \{256,512,1024,2048,4096\}$~KiB, each
+about the $r=50$, $e=2048$ baseline, with ten interleaved trials per point.
+
+\subsection{Native Cross-Language Recovery}
+\label{sec:method-crosslang}
+The draft's cross-language plan (Section~2.11) supplies \emph{one shared trace
+file} to C, Go, and Python to test algorithmic consistency and processing time.
+The experiments reported here answer a different question. Each implementation
+performs its \emph{own} measured collection with its native timer and then runs
+its own recovery, and we compare the resulting \emph{recovery reliability} as a
+function of trace count. This measures how each language's runtime affects the
+quality of the timing channel it can capture---the ``separate runtime-dependent
+experiment'' the draft anticipates---rather than the correctness of a shared
+computation.
+
+Because each language collects independently, the trace data (and its random
+seed) differ across implementations. Trace count, the fixed AES key, the dial
+settings, the outlier rule, the recovery algorithm, and the verification
+criterion are held identical; only the implementation (and hence its collection
+runtime) changes. Differences in recovery are therefore attributable to the
+language's runtime behaviour during collection, not to the attack logic, which
+is common. We treat this as a \emph{native-collection} comparison and keep it
+distinct from the shared-dataset consistency test, which remains future work.
+
+\subsection{Garbage-Collector Ablation (Go)}
+\label{sec:method-gc}
+Go executes within a managed runtime whose garbage collector (GC) and goroutine
+scheduler can preempt execution at unpredictable moments, adding jitter to the
+per-trace timings the attack depends on. To test whether this runtime noise is
+the cause of Go's higher threshold, we repeat the Go collection with two
+environment settings that quiet the runtime without altering the attack:
+\texttt{GOGC=off} (disables the collector, so no GC pause lands inside a timed
+region) and \texttt{GOMAXPROCS=1} (pins execution to one core, suppressing
+cross-core migration). Both are read by the Go runtime from the environment; no
+source change is made. For cost reasons the ablation uses a reduced grid (counts
+$\{500{,}000, 250{,}000, 100{,}000, 50{,}000\}$ and a $3\times3$ dial grid), so
+it is compared to the garbage-collected run only at matched points and by the
+fitted 50\% threshold, never by a grid-dependent high-reliability count.
+
+\subsection{Dataset Governance and Exclusion Criteria}
+\label{sec:method-governance}
+Several exploratory runs preceded the retained runs. To avoid selective
+reporting, inclusion follows fixed rules, and every excluded run's metadata is
+preserved (see the provenance table).
+\begin{itemize}
+  \item \textbf{Environment gate.} A run is excluded if its mean collection cost
+        exceeds roughly $1.2$~ms/sample (baseline $\approx 0.94$), a proxy for
+        background load. One 10-trial C sweep is excluded on this basis
+        ($\approx 3.0$~ms/sample, threefold inflated).
+  \item \textbf{Design gate.} Pilot runs with fewer trials, missing
+        reproducibility sidecars, or single-point grids are excluded from the
+        primary analysis and used only for design context.
+  \item \textbf{Implementation identity.} One retained C run was launched with an
+        \texttt{IMPL=go} tag before the harness supported language selection;
+        the C binary in fact executed. It is verified as C (no \texttt{impl}
+        field in its metadata; \texttt{min\_time} and ms/sample matching C) and
+        relabelled accordingly. This mislabelling is documented because an
+        earlier positional (rather than by-name) parse of the result column
+        produced incorrect tallies; all reported counts are recomputed by column
+        name.
+\end{itemize}

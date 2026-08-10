@@ -1,0 +1,30 @@
+== build ==
+make: Nothing to be done for `all'.
+== reusing existing fixed key /Users/huan/AES-Research-C/experiments/work/key.bin ==
+
+== sweep config ==
+repeat=50  evict_kb=2048  trials=10  pass_min=9
+counts: 150000
+planned total sample-units: 1500000 (ETA refines after the first run)
+
+CSV -> /Users/huan/AES-Research-C/experiments/count_threshold_v150k_results.csv
+
+-- count=150000 --
+   trial 1/10: FAIL (exit 2, 141s, min_time=109, score=17160.715)  ETA~21m9s
+   trial 2/10: PASS (exit 0, 142s, min_time=113, score=17068.712)  ETA~18m52s
+   trial 3/10: FAIL (exit 2, 141s, min_time=106, score=17111.367)  ETA~16m29s
+   trial 4/10: PASS (exit 0, 141s, min_time=109, score=17715.339)  ETA~14m7s
+   trial 5/10: PASS (exit 0, 142s, min_time=114, score=17201.478)  ETA~11m47s
+   trial 6/10: PASS (exit 0, 141s, min_time=116, score=17734.507)  ETA~9m25s
+   trial 7/10: PASS (exit 0, 145s, min_time=116, score=17667.157)  ETA~7m5s
+   trial 8/10: PASS (exit 0, 143s, min_time=111, score=18028.958)  ETA~4m44s
+   trial 9/10: FAIL (exit 2, 142s, min_time=116, score=17477.874)  ETA~2m22s
+   trial 10/10: PASS (exit 0, 141s, min_time=115, score=17637.065)  ETA~0m0s
+   => count=150000  passes=7/10  [fail]
+
+== summary (count : passes/trials : verdict) ==
+   150000 : 7/10 : fail
+
+THRESHOLD: none of the tested counts passed >= 9/10 (raise counts or repeat/evict).
+Full per-trial data: /Users/huan/AES-Research-C/experiments/count_threshold_v150k_results.csv
+Done.

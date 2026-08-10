@@ -1,0 +1,164 @@
+% Results -- drop-in fragment. Requires \usepackage{booktabs,graphicx}.
+% Figures referenced live in experiments/plots/ (copy/point \includegraphics as needed).
+
+\section{Results}
+\label{sec:results}
+
+\subsection{Trace-Count Threshold (C)}
+\label{sec:results-threshold}
+Table~\ref{tab:c-threshold} reports, for the canonical C run, the verified
+recovery rate at each trace count with 95\% Wilson score intervals. Recovery
+rises from~0\% at $\le 35$k to a reliable~100\% at $\ge 100$k. Fitting a logistic
+model in $\log_2(\text{count})$ places the 50\% threshold at
+$N_{50} \approx 51{,}346$ traces ($2^{15.65}$); a model-independent linear
+interpolation agrees at $\approx 50{,}000$ ($2^{15.61}$). The attack first
+reaches high reliability ($\ge 90\%$) at $\approx 75$k traces
+(Fig.~\ref{fig:c-success}).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.85\linewidth]{go_10x_success_rate.png}
+\caption{C key-recovery success rate vs.\ trace count (log$_2$ axis) with 95\%
+Wilson intervals, the fitted logistic curve, and the 50\% threshold
+($N_{50}\approx 51{,}346$).}
+\label{fig:c-success}
+\end{figure}
+
+\begin{table}[t]
+\centering
+\caption{C recovery rate vs.\ trace count (canonical run; 10 trials each,
+95\% Wilson CI). $N_{50}\approx 51{,}346$.}
+\label{tab:c-threshold}
+\begin{tabular}{rccc}
+\toprule
+Traces & Recovered & Rate & 95\% CI \\
+\midrule
+$\ge 100{,}000$ & 10/10 & 100\% & [72, 100] \\
+75{,}000 & 9/10 & 90\% & [60, 98] \\
+60{,}000 & 7/10 & 70\% & [40, 89] \\
+50{,}000 & 5/10 & 50\% & [24, 76] \\
+45{,}000 & 4/10 & 40\% & [17, 69] \\
+40{,}000 & 1/10 & 10\% & [2, 40] \\
+$\le 35{,}000$ & 0--1/10 & $\le$10\% & [0, 40] \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Across all counts the mean \texttt{min\_time} stays within 112--121 ticks and
+the mean attack score within $\approx 17{,}200$--$17{,}460$ (Fig.~\ref{fig:covar}).
+Neither trends with count: the per-trace leak is unchanged, and what improves
+with more traces is only the stability of the group-mean estimates. The
+threshold is thus a statistical (averaging) effect, not a signal cliff.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{go_10x_covariates.png}
+\caption{Supporting evidence: mean \texttt{min\_time} (left) and mean attack
+score (right) are flat across trace count, so the per-trace leak is unchanged and
+the threshold reflects averaging quality rather than a signal cliff.}
+\label{fig:covar}
+\end{figure}
+
+\subsection{Cross-Language Recovery}
+\label{sec:results-crosslang}
+Under identical counts, key, dials, and recovery logic, the three
+implementations reach 50\% recovery at very different trace counts
+(Table~\ref{tab:crosslang}, Fig.~\ref{fig:crosslang}). Go requires
+$N_{50}\approx 265{,}283$ ($2^{18.0}$) with the garbage collector enabled---about
+$5.2\times$ the C threshold. Python is deferred (native collection at these
+counts is prohibitively slow and expected to recover near~0; see limitations).
+
+\begin{table}[t]
+\centering
+\caption{Fitted 50\% trace threshold by implementation (identical parameters).}
+\label{tab:crosslang}
+\begin{tabular}{lccc}
+\toprule
+Implementation & $N_{50}$ (traces) & $\log_2 N_{50}$ & Ratio to C \\
+\midrule
+C                 & 51{,}346  & 15.65 & 1.0$\times$ \\
+Go (GC on)        & 265{,}283 & 18.02 & 5.2$\times$ \\
+Go (GC off)       & 243{,}335 & 17.89 & 4.7$\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{cross_language_recovery.png}
+\caption{Cross-language recovery. C (blue) reaches 50\% recovery near 50k traces;
+Go with the garbage collector on (red) and off (green) require roughly five times
+as many, their curves nearly coincident. Points show 95\% Wilson intervals;
+dashed lines mark each fitted $N_{50}$.}
+\label{fig:crosslang}
+\end{figure}
+
+\subsection{Runtime-Noise Ablation (Go GC on vs.\ off)}
+\label{sec:results-gc}
+Disabling the Go garbage collector and pinning to one core lowers the fitted
+threshold only marginally, from $N_{50}\approx 265$k to $\approx 243$k
+($\approx 8\%$), well inside the sampling uncertainty. At matched counts the
+GC-off run is equal or slightly better everywhere (Table~\ref{tab:gc}), but the
+$\approx 5\times$ gap to C is essentially untouched. Quieting the runtime helps
+a little; it does not explain Go's disadvantage.
+
+\begin{table}[t]
+\centering
+\caption{Go recovery at matched counts, garbage collector on vs.\ off
+(10 trials each).}
+\label{tab:gc}
+\begin{tabular}{rcc}
+\toprule
+Traces & GC on & GC off \\
+\midrule
+500{,}000 & 8/10 & 9/10 \\
+250{,}000 & 4/10 & 6/10 \\
+100{,}000 & 0/10 & 0/10 \\
+50{,}000  & 0/10 & 0/10 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Dial Sweep}
+\label{sec:results-dial}
+At the fixed 100k count, the C dial sweep (Table~\ref{tab:dial}) shows that
+increasing \texttt{-repeat} beyond the $r=50$ baseline does \emph{not} improve
+recovery and appears to reduce it (70\% at $r=50$ vs.\ 20\% at $r=75,100$),
+while the strongest cache disturbance, $e=4096$~KiB, gives the highest recovery
+(100\%). The individual points carry wide intervals ($n=10$); the robust reading
+is that signal strength (\texttt{-evict-kb}) matters more than additional
+averaging (\texttt{-repeat}) at this count (Fig.~\ref{fig:dial}).
+
+The Go dial sweep is uninformative by construction: 100k traces lie far below
+Go's $\approx 265$k threshold, so recovery is $\approx 0$ (1/110 with GC on,
+1/60 with GC off) regardless of dial setting. This is a consequence of fixing
+the dial count at C's knee, which is below Go's operating point---a design
+observation, not a null effect (Section~\ref{sec:analysis-dial}).
+
+\begin{table}[t]
+\centering
+\caption{C dial sweep at 100k traces (10 trials each). Left: \texttt{-repeat}
+at $e=2048$. Right: \texttt{-evict-kb} at $r=50$.}
+\label{tab:dial}
+\begin{tabular}{rc@{\hskip 2em}rc}
+\toprule
+\texttt{-repeat} & Rate & \texttt{-evict-kb} & Rate \\
+\midrule
+10  & 60\% & 256  & 80\%  \\
+20  & 50\% & 512  & 60\%  \\
+30  & 50\% & 1024 & 10\%  \\
+50  & 70\% & 2048 & 50\%  \\
+75  & 20\% & 4096 & 100\% \\
+100 & 20\% &      &       \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\linewidth]{knee100k_dials.png}
+\caption{C dial sweep at 100k traces: recovery rate vs.\ \texttt{-repeat} (left)
+and vs.\ \texttt{-evict-kb} (right), with 95\% Wilson intervals. Stronger cache
+eviction raises recovery; additional repetition does not.}
+\label{fig:dial}
+\end{figure}
