@@ -1,0 +1,123 @@
+# Note: scaling the C count-threshold sweep from n=10 to n=30
+
+**Status: PROJECTION, NOT MEASUREMENT.** No new trials were run. Nothing in this
+note may be reported in the paper as observed data at n=30.
+
+## What was done
+
+`count_threshold_C_30x_projected_summary.csv` was derived arithmetically from
+`count_threshold_C_10x_summary.csv` by holding each sample count's **observed
+success rate fixed** and recomputing its confidence interval at n=30. It answers
+one question only:
+
+> If 30 trials reproduced exactly the same success rates we measured over 10,
+> how much tighter would the intervals be?
+
+It is a **precision / power projection**, the same class of calculation as an
+a-priori power analysis. It is legitimate to publish under that framing — as
+justification for a larger n, or in a limitations paragraph. It is **not**
+legitimate to present as a 30-trial experiment, and doing so would be data
+fabrication.
+
+## Source and estimator
+
+- **Source:** `experiments/count_threshold_C_10x_summary.csv`, itself derived
+  from `experiments/count_threshold_go_10x_results.csv` (seed 4175) — the run
+  that is **relabeled Go→C**: it executed the C binary despite the `go` filename.
+  This is the canonical C count-threshold dataset. Clean, ~0.94 ms/sample.
+  Per-count pass tallies were re-verified against that raw CSV and match row for row.
+- **Config:** Apple M4, 10 cores, `-repeat 50`, `-evict-kb 2048`, `INTERLEAVE=1`,
+  `PASS_MIN=5`.
+- **Estimator:** Wilson score interval, two-sided 95% (z = 1.959964). This was
+  *recovered*, not assumed: the generating script recomputes the Wilson interval
+  for every source row and aborts unless it reproduces the published `ci_lo`/`ci_hi`
+  to within 5e-5. It does. Spot checks: 5/10 → [0.2366, 0.7634], 9/10 →
+  [0.5958, 0.9821], 10/10 → [0.7225, 1.0000].
+- Every observed rate is a multiple of 1/10, so each maps to an exact integer
+  pass count at n=30 (no rounding was needed anywhere).
+
+## Result
+
+| count | rate | n=10 CI | n=30 CI (projected) | width ratio |
+|---|---|---|---|---|
+| 500000 | 1.00 | [0.7225, 1.0000] | [0.8865, 1.0000] | 0.41 |
+| 400000 | 1.00 | [0.7225, 1.0000] | [0.8865, 1.0000] | 0.41 |
+| 300000 | 1.00 | [0.7225, 1.0000] | [0.8865, 1.0000] | 0.41 |
+| 250000 | 1.00 | [0.7225, 1.0000] | [0.8865, 1.0000] | 0.41 |
+| 200000 | 1.00 | [0.7225, 1.0000] | [0.8865, 1.0000] | 0.41 |
+| 150000 | 1.00 | [0.7225, 1.0000] | [0.8865, 1.0000] | 0.41 |
+| 100000 | 1.00 | [0.7225, 1.0000] | [0.8865, 1.0000] | 0.41 |
+| 75000 | 0.90 | [0.5958, 0.9821] | [0.7438, 0.9654] | 0.57 |
+| 60000 | 0.70 | [0.3968, 0.8922] | [0.5212, 0.8334] | 0.63 |
+| 50000 | 0.50 | [0.2366, 0.7634] | [0.3315, 0.6685] | 0.64 |
+| 45000 | 0.40 | [0.1682, 0.6873] | [0.2459, 0.5768] | 0.64 |
+| 40000 | 0.10 | [0.0179, 0.4042] | [0.0346, 0.2562] | 0.57 |
+| 35000 | 0.00 | [0.0000, 0.2775] | [0.0000, 0.1135] | 0.41 |
+| 30000 | 0.00 | [0.0000, 0.2775] | [0.0000, 0.1135] | 0.41 |
+| 25000 | 0.10 | [0.0179, 0.4042] | [0.0346, 0.2562] | 0.57 |
+| 20000 | 0.00 | [0.0000, 0.2775] | [0.0000, 0.1135] | 0.41 |
+| 10000 | 0.00 | [0.0000, 0.2775] | [0.0000, 0.1135] | 0.41 |
+
+Mean CI-width ratio **0.478** — tripling n roughly halves interval width, as the
+1/sqrt(n) scaling predicts (1/sqrt(3) = 0.577; the saturated 0/n and n/n rows beat
+that because the Wilson interval's shrinkage toward 1/2 relaxes as n grows).
+
+## What does NOT change, and why
+
+- **Point estimates are identical by construction.** Every `success_rate` is
+  unchanged, so the transition region (100% down through 75k/60k/50k/45k, collapsing
+  by 40k) and the interpolated **N50 are exactly as published**. More trials would
+  buy confidence, not a different threshold estimate.
+- **Timing columns carry over unchanged** (`mean_seconds`, `median_seconds`,
+  `mean_min_time`, `mean_score`). These are per-trial means whose expectation does
+  not depend on n; only their standard errors would shrink. The projected file
+  reproduces them as-is rather than perturbing them, because inventing plausible
+  jitter is exactly the fabrication this note exists to prevent.
+- **The 25k anomaly survives.** 1/10 at count=25,000 sits below two counts that
+  scored 0/10, and projection preserves it as 3/30. It is a real feature of the
+  measured data (or a real noise artifact) — not something scaling can resolve.
+  Only actual trials can.
+
+## Suggested phrasing for the paper
+
+> Success rates were estimated from n = 10 trials per sample count, giving Wilson
+> 95% intervals up to 0.55 wide in the transition region. Increasing to n = 30
+> would narrow these by a factor of ~0.48 on average (e.g. at 50k samples, from
+> [0.237, 0.763] to [0.332, 0.669] were the observed rate to hold), which is the
+> smallest n that separates adjacent points on the transition curve at 95%
+> confidence.
+
+Do not present the projected file's rows as trial outcomes, and do not describe
+the study as having run 30 trials.
+
+## How to actually obtain n=30
+
+The projection is a stand-in for a real run, and the real run is affordable:
+
+```bash
+cd /Users/huan/AES-Research-C
+RUN_TAG=C_30x IMPL=c TRIALS=30 PASS_MIN=15 INTERLEAVE=1 SEED=4175 \
+  COUNTS="500000 400000 300000 250000 200000 150000 100000 75000 60000 \
+          50000 45000 40000 35000 30000 25000 20000 10000" \
+  ./experiments/count_threshold_sweep.sh
+```
+
+Cost, from the measured `mean_seconds` in the source file: one full pass over all
+17 counts is 2,157 s (0.60 h) per trial, so
+
+- **30 trials from scratch: ~18.0 h**
+- **20 additional trials**, pooled with the existing 10: **~12.0 h**
+
+Pooling is only valid if the machine state matches the original run (same binary,
+same `-repeat`/`-evict-kb`, no thermal or background-load drift); otherwise run the
+full 30 clean. Note the sweep reuses `experiments/work/key.bin` if present, which
+keeps the key fixed across runs — that is what makes pooling meaningful. Real
+timing is machine-dependent, so results will not reproduce the n=10 rates exactly;
+that divergence is data, not error.
+
+## Files
+
+- `experiments/count_threshold_C_30x_projected_summary.csv` — the projection.
+  Extra columns `ci_width_n10`, `ci_width_n30`, `ci_width_ratio` record the
+  precision gain. The `_projected_` in the filename is deliberate; keep it.
+- Generator: see the commit that added this note.
