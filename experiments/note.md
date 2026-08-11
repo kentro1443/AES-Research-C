@@ -140,7 +140,8 @@ identical to the published `*_covariates` / `*_runtime` figures.
 ### The combined three-port figure
 
 `plots/cross_language_recovery.{png,svg}`, from `experiments/plot_compare.py`.
-All three implementations on one psychometric axis, beside an N50 panel:
+All three implementations on one psychometric axis, each series' 50% threshold
+marked by a dashed vertical line and stated in the legend:
 
 | Series | N50 | vs C | grid |
 |---|---|---|---|
@@ -174,9 +175,16 @@ Three fixes went into this figure beyond the earlier version:
    (50,000) to C's 10,000 — drawing confident-looking curve where GC-off has no
    data at all.
 3. **Legibility.** Series are nudged ±2% horizontally so coincident points and
-   their error bars stay separable (C and Go GC-on share all 17 counts, so their
-   markers previously sat exactly on top of each other), and the N50 panel states
-   the separation numerically instead of leaving it to be read off dashed lines.
+   their error bars stay separable — C and Go GC-on share all 17 counts, so their
+   markers previously sat exactly on top of each other.
+
+The layout is a single panel: N50 appears in the legend beside each series and as
+a dashed vertical rule on the plot. (An earlier revision split the thresholds into
+a separate right-hand "threshold separation" panel; it was removed as redundant
+with the legend.) Threshold lines are dashed for every series regardless of that
+series' own line style, because a solid vertical rule reads as data rather than
+annotation. Per-series ratios against C are printed to stdout by the script and
+tabulated above rather than crowding the plot.
 
 ### The same figure at projected n=30
 

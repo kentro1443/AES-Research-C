@@ -108,70 +108,38 @@ def draw_curves(ax, series):
                     markeredgecolor="white", markeredgewidth=0.6)
 
         if fit is not None:
-            a, b, _thr = fit
+            a, b, thr = fit
             # Draw each fit only across the counts that series actually sampled.
             # (The previous version accumulated the range across series, which
             # extrapolated the GC-off curve down past its lowest sampled count.)
             grid = np.linspace(math.log2(counts.min()), math.log2(counts.max()), 300)
             ax.plot(2.0 ** grid, 1.0 / (1.0 + np.exp(-(a + b * grid))),
                     ls=ls, color=colour, lw=2.0, alpha=0.95, zorder=2)
+            # 50% threshold marker. Deliberately dashed for every series rather
+            # than following the series line style: a solid vertical rule reads
+            # as data, and these are annotation.
+            ax.axvline(thr, color=colour, ls=(0, (5, 3)), lw=1.3, alpha=0.6, zorder=1)
 
     ax.axhline(0.5, color="#c8ccd0", lw=1, zorder=0)
     ax.set_xscale("log", base=2)
     ax.set_xlabel("sample count (traces)  [log2 axis]")
     ax.set_ylabel("key-recovery success rate")
     ax.set_ylim(-0.04, 1.04)
-    ax.set_title("Recovery curves", fontsize=11, color=INK)
     ax.grid(True, which="both", ls=":", alpha=0.35)
     for side in ("top", "right"):
         ax.spines[side].set_visible(False)
 
-    handles = [plt.Line2D([], [], color=PALETTE[i % len(PALETTE)],
-                          marker=MARKERS[i % len(MARKERS)],
-                          ls=LINESTYLES[i % len(LINESTYLES)], lw=2.0, ms=6,
-                          markeredgecolor="white", markeredgewidth=0.6,
-                          label=f"{lbl}  (n={rows[0]['n']}, {len(rows)} counts)")
-               for i, (lbl, rows, _f) in enumerate(series)]
-    ax.legend(handles=handles, loc="upper left", fontsize=9, framealpha=0.93)
-
-
-def draw_n50(ax, series):
-    """Side panel: the thresholds themselves, with ratios against the first series."""
-    fitted = [(lbl, f[2], PALETTE[i % len(PALETTE)], MARKERS[i % len(MARKERS)])
-              for i, (lbl, _r, f) in enumerate(series) if f is not None]
-    if not fitted:
-        ax.set_visible(False)
-        return
-    base = fitted[0][1]
-
-    for j, (lbl, n50, colour, marker) in enumerate(fitted):
-        y = len(fitted) - 1 - j
-        ax.plot([base, n50], [y, y], "-", color=colour, lw=1.4, alpha=0.35, zorder=1)
-        ax.plot(n50, y, marker, ms=10, color=colour, zorder=3,
-                markeredgecolor="white", markeredgewidth=0.9)
-        # Text stays in ink tokens; the coloured marker beside it carries identity.
-        ax.annotate(lbl, (n50, y), textcoords="offset points", xytext=(0, 13),
-                    ha="center", fontsize=9.5, color=INK, weight="medium")
-        ratio = "reference" if j == 0 else f"{n50 / base:.2f}x C"
-        ax.annotate(f"{n50:,.0f}   ({ratio})", (n50, y), textcoords="offset points",
-                    xytext=(0, -20), ha="center", fontsize=8.5, color=INK_MUTED)
-
-    ax.axvline(base, color=PALETTE[0], ls=":", lw=1.2, alpha=0.6, zorder=0)
-    ax.set_xscale("log", base=2)
-    # Pad generously in log space: the annotations are centred on their markers
-    # and would otherwise run off both ends of the panel.
-    n50s = [f[1] for f in fitted]
-    span = math.log2(max(n50s)) - math.log2(min(n50s))
-    pad = max(1.1, span * 0.5)
-    ax.set_xlim(2.0 ** (math.log2(min(n50s)) - pad),
-                2.0 ** (math.log2(max(n50s)) + pad))
-    ax.set_ylim(-0.75, len(fitted) - 0.25)
-    ax.set_yticks([])
-    ax.set_xlabel("N50: traces for 50% recovery  [log2 axis]")
-    ax.set_title("Threshold separation", fontsize=11, color=INK)
-    ax.grid(True, axis="x", which="both", ls=":", alpha=0.35)
-    for side in ("top", "right", "left"):
-        ax.spines[side].set_visible(False)
+    # The threshold is stated in the legend, beside the dashed marker that shows
+    # where it falls -- no separate panel needed.
+    handles = []
+    for i, (lbl, _rows, fit) in enumerate(series):
+        text = f"{lbl}  (N50 ≈ {fit[2]:,.0f})" if fit is not None else lbl
+        handles.append(plt.Line2D([], [], color=PALETTE[i % len(PALETTE)],
+                                  marker=MARKERS[i % len(MARKERS)],
+                                  ls=LINESTYLES[i % len(LINESTYLES)], lw=2.0, ms=6,
+                                  markeredgecolor="white", markeredgewidth=0.6,
+                                  label=text))
+    ax.legend(handles=handles, loc="upper left", fontsize=9.5, framealpha=0.93)
 
 
 def main(argv):
@@ -196,10 +164,8 @@ def main(argv):
             sys.exit(f"error: no usable rows in {path}")
         series.append((label.strip(), rows, pt.fit_logistic(rows)))
 
-    fig, (ax1, ax2) = plt.subplots(
-        1, 2, figsize=(14, 6.2), gridspec_kw={"width_ratios": [2.25, 1]})
-    draw_curves(ax1, series)
-    draw_n50(ax2, series)
+    fig, ax = plt.subplots(figsize=(11, 6.3))
+    draw_curves(ax, series)
 
     ns = sorted({r["n"] for _l, rows, _f in series for r in rows})
     title = "AES cache-timing key recovery: trace threshold by implementation"
@@ -210,15 +176,17 @@ def main(argv):
     if projected:
         # Diagonal watermark behind the curves: survives cropping and screenshots
         # in a way a footnote does not.
-        ax1.text(0.5, 0.5, "PROJECTED\nNOT MEASURED", transform=ax1.transAxes,
-                 ha="center", va="center", fontsize=40, color="#b3541e",
-                 alpha=0.13, rotation=22, weight="bold", zorder=0)
+        ax.text(0.5, 0.5, "PROJECTED\nNOT MEASURED", transform=ax.transAxes,
+                ha="center", va="center", fontsize=40, color="#b3541e",
+                alpha=0.13, rotation=22, weight="bold", zorder=0)
 
     fig.tight_layout(rect=(0, 0 if projected else 0.045, 1, 0.955))
+    grids = ", ".join(f"{lbl} {len(rows)}" for lbl, rows, _f in series)
     provenance = (
-        f"Error bars are 95% Wilson intervals; curves are logistic fits over each series' "
-        "own sampled range. Series are nudged +-2% horizontally\nso coincident points stay "
-        "separable; C and Go (GC on) share all 17 counts."
+        "Vertical lines mark each series' 50% threshold (N50). Error bars are 95% Wilson "
+        "intervals; curves are logistic fits over each\nseries' own sampled range. Series are "
+        "nudged +-2% horizontally so coincident points stay separable.  "
+        f"Sample counts per series: {grids}."
     )
     if projected:
         # Hung below the axes at negative figure-y so bbox_inches='tight' grows the
