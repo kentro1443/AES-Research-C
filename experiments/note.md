@@ -167,8 +167,15 @@ Three fixes went into this figure beyond the earlier version:
    Go (GC off) are the two curves a reader most needs to distinguish *and* they
    nearly coincide. GC-off moved green → dark amber `#c47f00`; the triple now
    passes all-pairs at ΔE 9.2 (deutan) / 10.0 (tritan), normal-vision 15.7, and
-   contrast ≥ 3:1. Series also carry distinct marker shapes and line styles, so
-   identity never rests on hue alone in print.
+   contrast ≥ 3:1. Series also carry distinct marker shapes (circle / square /
+   triangle), so identity never rests on hue alone in print.
+
+   All three curves are drawn **solid**. An earlier revision varied line style per
+   series as extra non-colour encoding, but dashing reads as "extrapolated or less
+   certain" in a scientific figure, and all three curves are the same kind of
+   logistic fit over equally real measurements — it misled a reader on first
+   viewing. Marker shape carries the secondary encoding instead. Dashes are now
+   reserved for the vertical threshold rules, which genuinely are annotation.
 2. **Fit ranges.** Each logistic curve is now drawn only across the counts its
    own series sampled. The previous version accumulated the range across series,
    which extrapolated the GC-off curve down past its lowest sampled count

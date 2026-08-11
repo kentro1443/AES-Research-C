@@ -56,8 +56,11 @@ except ModuleNotFoundError as exc:  # pragma: no cover
 # most needs to tell apart and they very nearly coincide.
 PALETTE = ["#1f6feb", "#d1495b", "#c47f00", "#9b5de5", "#00857a"]
 # Secondary encoding so identity never rests on hue alone (print / CVD).
+# Marker shape only: every curve is drawn solid. Dashing some series would read
+# as "extrapolated / less certain", but all three curves are the same kind of
+# logistic fit over equally real measurements. Dashes are reserved for the
+# vertical threshold rules, which genuinely are annotation rather than data.
 MARKERS = ["o", "s", "^", "D", "v"]
-LINESTYLES = ["-", "--", "-.", ":", (0, (3, 1, 1, 1))]
 
 INK, INK_MUTED = "#1a1a1a", "#5c6670"
 
@@ -92,7 +95,6 @@ def draw_curves(ax, series):
     n = len(series)
     for i, (label, rows, fit) in enumerate(series):
         colour, marker = PALETTE[i % len(PALETTE)], MARKERS[i % len(MARKERS)]
-        ls = LINESTYLES[i % len(LINESTYLES)]
         counts = np.array([r["count"] for r in rows], dtype=float)
         rate = np.array([r["success_rate"] for r in rows])
         lo = np.array([r["ci_lo"] for r in rows])
@@ -114,7 +116,7 @@ def draw_curves(ax, series):
             # extrapolated the GC-off curve down past its lowest sampled count.)
             grid = np.linspace(math.log2(counts.min()), math.log2(counts.max()), 300)
             ax.plot(2.0 ** grid, 1.0 / (1.0 + np.exp(-(a + b * grid))),
-                    ls=ls, color=colour, lw=2.0, alpha=0.95, zorder=2)
+                    ls="-", color=colour, lw=2.0, alpha=0.95, zorder=2)
             # 50% threshold marker. Deliberately dashed for every series rather
             # than following the series line style: a solid vertical rule reads
             # as data, and these are annotation.
@@ -136,7 +138,7 @@ def draw_curves(ax, series):
         text = f"{lbl}  (N50 ≈ {fit[2]:,.0f})" if fit is not None else lbl
         handles.append(plt.Line2D([], [], color=PALETTE[i % len(PALETTE)],
                                   marker=MARKERS[i % len(MARKERS)],
-                                  ls=LINESTYLES[i % len(LINESTYLES)], lw=2.0, ms=6,
+                                  ls="-", lw=2.0, ms=6,
                                   markeredgecolor="white", markeredgewidth=0.6,
                                   label=text))
     ax.legend(handles=handles, loc="upper left", fontsize=9.5, framealpha=0.93)
