@@ -178,6 +178,39 @@ Three fixes went into this figure beyond the earlier version:
    markers previously sat exactly on top of each other), and the N50 panel states
    the separation numerically instead of leaving it to be read off dashed lines.
 
+### The same figure at projected n=30
+
+`plots/cross_language_recovery_30x_projected.{png,svg}`, from the same script with
+`--projected` and the three `*_30x_projected_summary.csv` inputs.
+
+| Series | N50 (measured n=10) | N50 (projected n=30) | vs C |
+|---|---|---|---|
+| C | 51,346 | 51,317 | reference |
+| Go (GC on) | 265,283 | 265,252 | 5.17x |
+| Go (GC off) | 243,335 | 243,594 | 4.75x |
+
+The comparison is the same picture with narrower error bars — which *is* the
+finding: no amount of extra trials moves the cross-language conclusion.
+
+It carries the caution at three levels, so the caveat cannot be lost by cropping
+or by pasting the image somewhere without its caption:
+
+1. the plot title reads `— PROJECTED to n=30`;
+2. a diagonal **PROJECTED / NOT MEASURED** watermark sits behind the curves;
+3. a bold `CAUTION — PROJECTED, NOT MEASURED DATA` heading over a boxed
+   explanation states that no 30-trial runs happened, that only the intervals
+   were recomputed, and that it must not be cited as a 30-trial experiment.
+
+`plot_compare.py` **fails closed**: passing any file whose name contains
+`projected` without `--projected` is a hard error rather than a silently
+uncautioned figure. It also now accepts summary CSVs directly, so projections
+never have to be expanded into synthetic per-trial rows to be plotted.
+
+**Which to use:** the measured `cross_language_recovery` is the one for the
+results section — it needs no caveat and the curves are identical. Reach for the
+projected variant only in a power/limitations discussion, to show what tripling
+n would and would not buy.
+
 Not changed: `plot_threshold.py` / `plot_projection.py` still use red and green
 for the *fit* and *interpolated* threshold markers. Those are two annotation
 lines rather than categorical data series, and they are already separated by line

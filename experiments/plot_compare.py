@@ -19,8 +19,15 @@ Usage:
         "Go (GC on)=experiments/count_threshold_go_count_results.csv" \
         "Go (GC off)=experiments/count_threshold_go_gcoff_count_results.csv"
 
+Pass --projected with the *_30x_projected_summary.csv files to draw the same
+comparison at the projected n=30. That variant is stamped with a caution banner
+and a diagonal watermark, and writes to a separate filename. Passing a file whose
+name contains "projected" without the flag is a hard error, so the projection can
+never be rendered as if it were measured.
+
 Output:
     experiments/plots/cross_language_recovery.{png,svg}
+    experiments/plots/cross_language_recovery_30x_projected.{png,svg}   (--projected)
 """
 from __future__ import annotations
 
@@ -28,7 +35,10 @@ import math
 import os
 import sys
 
+import csv
+
 import plot_threshold as pt  # same directory; reuse its maths
+from plot_projection import load_summary  # owns reading projected summaries
 
 try:
     import numpy as np
@@ -50,6 +60,31 @@ MARKERS = ["o", "s", "^", "D", "v"]
 LINESTYLES = ["-", "--", "-.", ":", (0, (3, 1, 1, 1))]
 
 INK, INK_MUTED = "#1a1a1a", "#5c6670"
+
+CAUTION_TITLE = "CAUTION — PROJECTED, NOT MEASURED DATA"
+CAUTION_BODY = (
+    "No 30-trial runs were performed. Each success rate is the observed n=10 value held fixed; "
+    "only the 95% Wilson intervals are\nrecomputed at n=30. Point estimates — and all three N50 "
+    "thresholds — are therefore unchanged from the measured figure.\n"
+    "Do not cite this as a 30-trial experiment. See experiments/note.md."
+)
+
+
+def load_any(path):
+    """Load a per-trial results CSV or an already-aggregated summary CSV.
+
+    Projections only exist as summaries. Expanding one into synthetic PASS/FAIL
+    rows so the per-trial loader could eat it would produce a file
+    indistinguishable from a real 30-trial run, so the summary is read directly.
+    """
+    with open(path, newline="") as fh:
+        fields = set(csv.DictReader(fh).fieldnames or [])
+    if "result" in fields:
+        return pt.aggregate(pt.load_rows(path))
+    if {"count", "n", "passes", "success_rate", "ci_lo", "ci_hi"} <= fields:
+        return load_summary(path)
+    sys.exit(f"error: {path} is neither a results CSV (needs 'result') nor a "
+             f"summary CSV (needs count/n/passes/success_rate/ci_lo/ci_hi)")
 
 
 def draw_curves(ax, series):
@@ -140,17 +175,23 @@ def draw_n50(ax, series):
 
 
 def main(argv):
-    if len(argv) < 2:
-        sys.exit(f"usage: {argv[0]} LABEL=path.csv [LABEL=path.csv ...]")
+    specs = [a for a in argv[1:] if a != "--projected"]
+    projected = "--projected" in argv[1:]
+    if not specs:
+        sys.exit(f"usage: {argv[0]} [--projected] LABEL=path.csv [LABEL=path.csv ...]")
 
     series = []
-    for spec in argv[1:]:
+    for spec in specs:
         if "=" not in spec:
             sys.exit(f"error: expected LABEL=path.csv, got '{spec}'")
         label, path = spec.split("=", 1)
         if not os.path.isfile(path):
             sys.exit(f"error: no such file: {path}")
-        rows = pt.aggregate(pt.load_rows(path))
+        # Fail closed: a projected input must never render without the caution.
+        if "projected" in os.path.basename(path) and not projected:
+            sys.exit(f"error: {path} looks like a projection but --projected was "
+                     "not passed; refusing to draw it without the caution banner")
+        rows = load_any(path)
         if not rows:
             sys.exit(f"error: no usable rows in {path}")
         series.append((label.strip(), rows, pt.fit_logistic(rows)))
@@ -160,25 +201,47 @@ def main(argv):
     draw_curves(ax1, series)
     draw_n50(ax2, series)
 
-    fig.suptitle("AES cache-timing key recovery: trace threshold by implementation",
-                 fontsize=13.5, color=INK)
-    fig.tight_layout(rect=(0, 0.045, 1, 0.955))
     ns = sorted({r["n"] for _l, rows, _f in series for r in rows})
-    fig.text(0.5, 0.012,
-             f"Measured data, n={'/'.join(str(x) for x in ns)} trials per sample count. "
-             "Error bars are 95% Wilson intervals; curves are logistic fits over each "
-             "series' own sampled range.\nSeries are nudged +-2% horizontally so "
-             "coincident points stay separable; C and Go (GC on) share all 17 counts.",
-             ha="center", va="bottom", fontsize=8, color=INK_MUTED)
+    title = "AES cache-timing key recovery: trace threshold by implementation"
+    if projected:
+        title += f"  —  PROJECTED to n={'/'.join(str(x) for x in ns)}"
+    fig.suptitle(title, fontsize=13.5, color=INK)
 
-    outdir = os.path.join(os.path.dirname(os.path.abspath(argv[1].split("=", 1)[1])), "plots")
+    if projected:
+        # Diagonal watermark behind the curves: survives cropping and screenshots
+        # in a way a footnote does not.
+        ax1.text(0.5, 0.5, "PROJECTED\nNOT MEASURED", transform=ax1.transAxes,
+                 ha="center", va="center", fontsize=40, color="#b3541e",
+                 alpha=0.13, rotation=22, weight="bold", zorder=0)
+
+    fig.tight_layout(rect=(0, 0 if projected else 0.045, 1, 0.955))
+    provenance = (
+        f"Error bars are 95% Wilson intervals; curves are logistic fits over each series' "
+        "own sampled range. Series are nudged +-2% horizontally\nso coincident points stay "
+        "separable; C and Go (GC on) share all 17 counts."
+    )
+    if projected:
+        # Hung below the axes at negative figure-y so bbox_inches='tight' grows the
+        # canvas around them. Reserving a band with tight_layout(rect=) instead
+        # lets the box's opaque facecolor paint over the heading.
+        fig.text(0.5, -0.025, CAUTION_TITLE, ha="center", va="top", fontsize=12,
+                 color="#8a3a12", weight="bold")
+        fig.text(0.5, -0.075, CAUTION_BODY + "\n\n" + provenance, ha="center",
+                 va="top", fontsize=8, color="#7a4a20",
+                 bbox=dict(boxstyle="round,pad=0.6", fc="#fdf3e3", ec="#d4a24c", lw=1.4))
+    else:
+        fig.text(0.5, 0.012,
+                 f"Measured data, n={'/'.join(str(x) for x in ns)} trials per sample count. "
+                 + provenance, ha="center", va="bottom", fontsize=8, color=INK_MUTED)
+
+    stem = "cross_language_recovery" + ("_30x_projected" if projected else "")
+    outdir = os.path.join(os.path.dirname(os.path.abspath(specs[0].split("=", 1)[1])), "plots")
     os.makedirs(outdir, exist_ok=True)
     for ext in ("png", "svg"):
-        fig.savefig(os.path.join(outdir, f"cross_language_recovery.{ext}"),
-                    dpi=140, bbox_inches="tight")
+        fig.savefig(os.path.join(outdir, f"{stem}.{ext}"), dpi=140, bbox_inches="tight")
     plt.close(fig)
 
-    print(f"wrote {outdir}/cross_language_recovery.png (+ .svg)")
+    print(f"wrote {outdir}/{stem}.png (+ .svg)")
     base = next((f[2] for _l, _r, f in series if f is not None), None)
     for label, rows, fit in series:
         if fit:
