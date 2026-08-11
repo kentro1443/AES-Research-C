@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """plot_compare.py -- overlay recovery curves from several count-threshold runs.
 
-Draws one success-rate-vs-count psychometric plot with multiple implementations
-on the same axes (points + 95% Wilson CIs + logistic fit + 50% threshold marker
-per series). This is the cross-language comparison figure: C vs Go(GC on) vs
-Go(GC off), showing how far apart their trace thresholds sit.
+Draws the cross-language comparison figure: C vs Go(GC on) vs Go(GC off) on one
+psychometric axis (points + 95% Wilson CIs + logistic fit per series), beside an
+N50 panel that states the threshold separation directly.
+
+Uses MEASURED per-trial data (n=10), not the n=30 projection. The projection
+leaves every point estimate untouched, so this comparison is identical either
+way and is better drawn from real trials -- no PROJECTION caveat needed. See
+experiments/note.md.
 
 Reuses the aggregation / Wilson / logistic-fit code in plot_threshold.py so the
 numbers here are identical to the per-run analysis.
@@ -34,8 +38,105 @@ try:
 except ModuleNotFoundError as exc:  # pragma: no cover
     sys.exit(f"error: missing dependency '{exc.name}': pip install matplotlib numpy")
 
-# Distinct, colour-blind-friendly series colours.
-PALETTE = ["#1f6feb", "#d1495b", "#2e8540", "#9b5de5", "#e08e00"]
+# Categorical series palette, assigned in fixed order (never cycled).
+# Validated all-pairs: worst CVD separation dE 9.2 (deutan) / 10.0 (tritan),
+# normal-vision 15.7, contrast >= 3:1 against a white surface. The previous
+# green (#2e8540) failed CVD against the red at dE 6.0 -- which mattered
+# precisely here, because Go(GC on) and Go(GC off) are the two curves a reader
+# most needs to tell apart and they very nearly coincide.
+PALETTE = ["#1f6feb", "#d1495b", "#c47f00", "#9b5de5", "#00857a"]
+# Secondary encoding so identity never rests on hue alone (print / CVD).
+MARKERS = ["o", "s", "^", "D", "v"]
+LINESTYLES = ["-", "--", "-.", ":", (0, (3, 1, 1, 1))]
+
+INK, INK_MUTED = "#1a1a1a", "#5c6670"
+
+
+def draw_curves(ax, series):
+    """Main panel: success rate vs sample count, one series per implementation."""
+    n = len(series)
+    for i, (label, rows, fit) in enumerate(series):
+        colour, marker = PALETTE[i % len(PALETTE)], MARKERS[i % len(MARKERS)]
+        ls = LINESTYLES[i % len(LINESTYLES)]
+        counts = np.array([r["count"] for r in rows], dtype=float)
+        rate = np.array([r["success_rate"] for r in rows])
+        lo = np.array([r["ci_lo"] for r in rows])
+        hi = np.array([r["ci_hi"] for r in rows])
+
+        # Nudge each series along the log axis so coincident points and their
+        # error bars stay separable -- C and Go(GC on) share all 17 counts.
+        dodge = 2.0 ** ((i - (n - 1) / 2.0) * 0.020)
+
+        ax.errorbar(counts * dodge, rate, yerr=[rate - lo, hi - rate],
+                    fmt=marker, ms=5.5, color=colour, ecolor=colour, alpha=0.75,
+                    elinewidth=1.1, capsize=2.5, ls="none", zorder=3,
+                    markeredgecolor="white", markeredgewidth=0.6)
+
+        if fit is not None:
+            a, b, _thr = fit
+            # Draw each fit only across the counts that series actually sampled.
+            # (The previous version accumulated the range across series, which
+            # extrapolated the GC-off curve down past its lowest sampled count.)
+            grid = np.linspace(math.log2(counts.min()), math.log2(counts.max()), 300)
+            ax.plot(2.0 ** grid, 1.0 / (1.0 + np.exp(-(a + b * grid))),
+                    ls=ls, color=colour, lw=2.0, alpha=0.95, zorder=2)
+
+    ax.axhline(0.5, color="#c8ccd0", lw=1, zorder=0)
+    ax.set_xscale("log", base=2)
+    ax.set_xlabel("sample count (traces)  [log2 axis]")
+    ax.set_ylabel("key-recovery success rate")
+    ax.set_ylim(-0.04, 1.04)
+    ax.set_title("Recovery curves", fontsize=11, color=INK)
+    ax.grid(True, which="both", ls=":", alpha=0.35)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+
+    handles = [plt.Line2D([], [], color=PALETTE[i % len(PALETTE)],
+                          marker=MARKERS[i % len(MARKERS)],
+                          ls=LINESTYLES[i % len(LINESTYLES)], lw=2.0, ms=6,
+                          markeredgecolor="white", markeredgewidth=0.6,
+                          label=f"{lbl}  (n={rows[0]['n']}, {len(rows)} counts)")
+               for i, (lbl, rows, _f) in enumerate(series)]
+    ax.legend(handles=handles, loc="upper left", fontsize=9, framealpha=0.93)
+
+
+def draw_n50(ax, series):
+    """Side panel: the thresholds themselves, with ratios against the first series."""
+    fitted = [(lbl, f[2], PALETTE[i % len(PALETTE)], MARKERS[i % len(MARKERS)])
+              for i, (lbl, _r, f) in enumerate(series) if f is not None]
+    if not fitted:
+        ax.set_visible(False)
+        return
+    base = fitted[0][1]
+
+    for j, (lbl, n50, colour, marker) in enumerate(fitted):
+        y = len(fitted) - 1 - j
+        ax.plot([base, n50], [y, y], "-", color=colour, lw=1.4, alpha=0.35, zorder=1)
+        ax.plot(n50, y, marker, ms=10, color=colour, zorder=3,
+                markeredgecolor="white", markeredgewidth=0.9)
+        # Text stays in ink tokens; the coloured marker beside it carries identity.
+        ax.annotate(lbl, (n50, y), textcoords="offset points", xytext=(0, 13),
+                    ha="center", fontsize=9.5, color=INK, weight="medium")
+        ratio = "reference" if j == 0 else f"{n50 / base:.2f}x C"
+        ax.annotate(f"{n50:,.0f}   ({ratio})", (n50, y), textcoords="offset points",
+                    xytext=(0, -20), ha="center", fontsize=8.5, color=INK_MUTED)
+
+    ax.axvline(base, color=PALETTE[0], ls=":", lw=1.2, alpha=0.6, zorder=0)
+    ax.set_xscale("log", base=2)
+    # Pad generously in log space: the annotations are centred on their markers
+    # and would otherwise run off both ends of the panel.
+    n50s = [f[1] for f in fitted]
+    span = math.log2(max(n50s)) - math.log2(min(n50s))
+    pad = max(1.1, span * 0.5)
+    ax.set_xlim(2.0 ** (math.log2(min(n50s)) - pad),
+                2.0 ** (math.log2(max(n50s)) + pad))
+    ax.set_ylim(-0.75, len(fitted) - 0.25)
+    ax.set_yticks([])
+    ax.set_xlabel("N50: traces for 50% recovery  [log2 axis]")
+    ax.set_title("Threshold separation", fontsize=11, color=INK)
+    ax.grid(True, axis="x", which="both", ls=":", alpha=0.35)
+    for side in ("top", "right", "left"):
+        ax.spines[side].set_visible(False)
 
 
 def main(argv):
@@ -54,48 +155,35 @@ def main(argv):
             sys.exit(f"error: no usable rows in {path}")
         series.append((label.strip(), rows, pt.fit_logistic(rows)))
 
-    fig, ax = plt.subplots(figsize=(10, 6))
-    all_counts = []
-    for i, (label, rows, fit) in enumerate(series):
-        colour = PALETTE[i % len(PALETTE)]
-        counts = np.array([r["count"] for r in rows], dtype=float)
-        rate = np.array([r["success_rate"] for r in rows])
-        lo = np.array([r["ci_lo"] for r in rows])
-        hi = np.array([r["ci_hi"] for r in rows])
-        all_counts.extend(counts.tolist())
+    fig, (ax1, ax2) = plt.subplots(
+        1, 2, figsize=(14, 6.2), gridspec_kw={"width_ratios": [2.25, 1]})
+    draw_curves(ax1, series)
+    draw_n50(ax2, series)
 
-        n50 = fit[2] if fit else None
-        lbl = f"{label}" + (f"  (N50 ≈ {n50:,.0f})" if n50 else "")
-        ax.errorbar(counts, rate, yerr=[rate - lo, hi - rate], fmt="o", ms=6,
-                    color=colour, ecolor=colour, alpha=0.9, capsize=3, zorder=3,
-                    label=lbl)
-        if fit is not None:
-            a, b, thr = fit
-            grid = np.linspace(math.log2(min(all_counts)), math.log2(max(all_counts)), 300)
-            curve = 1.0 / (1.0 + np.exp(-(a + b * grid)))
-            ax.plot(2.0 ** grid, curve, "-", color=colour, lw=2, alpha=0.85, zorder=2)
-            ax.axvline(thr, color=colour, ls="--", lw=1.0, alpha=0.7, zorder=1)
-
-    ax.axhline(0.5, color="#c0c0c0", lw=1, zorder=0)
-    ax.set_xscale("log", base=2)
-    ax.set_xlabel("sample count (traces)  [log₂ axis]")
-    ax.set_ylabel("key-recovery success rate")
-    ax.set_ylim(-0.03, 1.03)
-    ax.set_title("Cross-language recovery: trace threshold by implementation")
-    ax.grid(True, which="both", ls=":", alpha=0.4)
-    ax.legend(loc="lower right", fontsize=9)
+    fig.suptitle("AES cache-timing key recovery: trace threshold by implementation",
+                 fontsize=13.5, color=INK)
+    fig.tight_layout(rect=(0, 0.045, 1, 0.955))
+    ns = sorted({r["n"] for _l, rows, _f in series for r in rows})
+    fig.text(0.5, 0.012,
+             f"Measured data, n={'/'.join(str(x) for x in ns)} trials per sample count. "
+             "Error bars are 95% Wilson intervals; curves are logistic fits over each "
+             "series' own sampled range.\nSeries are nudged +-2% horizontally so "
+             "coincident points stay separable; C and Go (GC on) share all 17 counts.",
+             ha="center", va="bottom", fontsize=8, color=INK_MUTED)
 
     outdir = os.path.join(os.path.dirname(os.path.abspath(argv[1].split("=", 1)[1])), "plots")
     os.makedirs(outdir, exist_ok=True)
-    fig.tight_layout()
     for ext in ("png", "svg"):
         fig.savefig(os.path.join(outdir, f"cross_language_recovery.{ext}"),
                     dpi=140, bbox_inches="tight")
     plt.close(fig)
+
     print(f"wrote {outdir}/cross_language_recovery.png (+ .svg)")
-    for label, _rows, fit in series:
+    base = next((f[2] for _l, _r, f in series if f is not None), None)
+    for label, rows, fit in series:
         if fit:
-            print(f"  {label:<14} N50 = {fit[2]:,.0f}  (2^{math.log2(fit[2]):.2f})")
+            print(f"  {label:<14} N50 = {fit[2]:>9,.0f}  (2^{math.log2(fit[2]):.2f})"
+                  f"  = {fit[2]/base:.2f}x  [{len(rows)} counts, n={rows[0]['n']}]")
 
 
 if __name__ == "__main__":

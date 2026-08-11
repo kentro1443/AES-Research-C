@@ -137,6 +137,53 @@ Covariate and runtime panels are deliberately **not** regenerated. They plot
 per-trial means, which the projection leaves untouched, so they would be
 identical to the published `*_covariates` / `*_runtime` figures.
 
+### The combined three-port figure
+
+`plots/cross_language_recovery.{png,svg}`, from `experiments/plot_compare.py`.
+All three implementations on one psychometric axis, beside an N50 panel:
+
+| Series | N50 | vs C | grid |
+|---|---|---|---|
+| C | 51,346 (2^15.65) | reference | 17 counts |
+| Go (GC on) | 265,283 (2^18.02) | **5.17x** | 17 counts |
+| Go (GC off) | 243,335 (2^17.89) | **4.74x** | 4 counts |
+
+Turning the GC off closes only **~10% of the C→Go gap** (21,948 of 213,937
+traces), which is the visual form of the paper's conclusion that the Go penalty
+is runtime noise rather than garbage collection.
+
+**This figure is built from MEASURED n=10 data, not the projection.** That is
+deliberate: the projection leaves every point estimate untouched, so the
+three-way comparison is identical either way, and drawing it from real trials
+means it carries no PROJECTION caveat and can be cited directly. The only thing
+n=30 would change here is error-bar width.
+
+Three fixes went into this figure beyond the earlier version:
+
+1. **Palette.** The old C/Go-on/Go-off triple (`#1f6feb` / `#d1495b` / `#2e8540`)
+   fails colourblind separation — red vs green at ΔE 6.0 under deuteranopia,
+   below the ΔE 8 floor. That mattered specifically here, because Go (GC on) and
+   Go (GC off) are the two curves a reader most needs to distinguish *and* they
+   nearly coincide. GC-off moved green → dark amber `#c47f00`; the triple now
+   passes all-pairs at ΔE 9.2 (deutan) / 10.0 (tritan), normal-vision 15.7, and
+   contrast ≥ 3:1. Series also carry distinct marker shapes and line styles, so
+   identity never rests on hue alone in print.
+2. **Fit ranges.** Each logistic curve is now drawn only across the counts its
+   own series sampled. The previous version accumulated the range across series,
+   which extrapolated the GC-off curve down past its lowest sampled count
+   (50,000) to C's 10,000 — drawing confident-looking curve where GC-off has no
+   data at all.
+3. **Legibility.** Series are nudged ±2% horizontally so coincident points and
+   their error bars stay separable (C and Go GC-on share all 17 counts, so their
+   markers previously sat exactly on top of each other), and the N50 panel states
+   the separation numerically instead of leaving it to be read off dashed lines.
+
+Not changed: `plot_threshold.py` / `plot_projection.py` still use red and green
+for the *fit* and *interpolated* threshold markers. Those are two annotation
+lines rather than categorical data series, and they are already separated by line
+style (dashed vs dotted), so the CVD risk is much lower. Worth revisiting if the
+paper goes to greyscale print.
+
 ## Suggested phrasing for the paper
 
 > Success rates were estimated from n = 10 trials per sample count, giving Wilson
